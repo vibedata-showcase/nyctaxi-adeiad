@@ -147,6 +147,10 @@
     {
       "relation": "core.dim_fare_regime",
       "reason": "No join key into any star: no fact carries a fare-regime key, so it cannot be a conformed dimension."
+    },
+    {
+      "relation": "agg.agg_borough_flow_monthly",
+      "reason": "Its origin and destination carry one merged 'unresolved' group: the two borough values that place no zone in a borough are relabelled into a single member, so the table's groups can never equal the star's, which keeps Unknown and N/A apart. A relabelled population is not a roll-up. The same question is answerable through the trips detail source, which reaches both zone borough roles at the borough level."
     }
   ],
   "sources": {
