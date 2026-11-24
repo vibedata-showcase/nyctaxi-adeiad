@@ -563,7 +563,7 @@ models:
         description: Calendar year of the month.
       - name: origin_borough
         data_type: VARCHAR
-        data_tests: [not_null]
+        data_tests: [not_null, {accepted_values: {arguments: {values: [Manhattan, Brooklyn, Queens, Bronx, Staten Island, EWR, Unknown, N/A]}}}]
         description: Borough of the pickup zone, at the zone version in force on the trip's date. N/A and Unknown are the unresolved group, flagged by origin_is_unresolved (ADR 0012).
       - name: origin_is_unresolved
         data_type: BOOLEAN
@@ -571,7 +571,7 @@ models:
         description: True when the pickup zone's borough is one the dimension cannot resolve (N/A or Unknown). The row is still published; the flag says why it carries no cross-borough share (ADR 0012, ADR 0004).
       - name: dest_borough
         data_type: VARCHAR
-        data_tests: [not_null]
+        data_tests: [not_null, {accepted_values: {arguments: {values: [Manhattan, Brooklyn, Queens, Bronx, Staten Island, EWR, Unknown, N/A]}}}]
         description: Borough of the dropoff zone, at the zone version in force on the trip's date. N/A and Unknown are the unresolved group, flagged by dest_is_unresolved.
       - name: dest_is_unresolved
         data_type: BOOLEAN
@@ -584,7 +584,7 @@ models:
       - name: trip_count
         data_type: BIGINT
         data_tests: [not_null]
-        description: Billable trips picked up in the month that ran between the pair, at any volume -- the table has no floor, so a pair of one trip is published (ADR 0018).
+        description: '{{ doc("borough_flow_trip_count") }}'
       - name: total_revenue
         data_type: DOUBLE
         data_tests: [not_null]

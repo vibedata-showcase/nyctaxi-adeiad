@@ -72,7 +72,9 @@ def test_dangling_alias_fails(tmp_path):
 def test_self_alias_fails(tmp_path):
     doc = _doc()
     payload = json.loads(doc["custom_extensions"][0]["data"])
-    payload["physical_tables"][3]["alias_of"] = "Pickup_Zone"
+    next(
+        table for table in payload["physical_tables"] if table["name"] == "Pickup_Zone"
+    )["alias_of"] = "Pickup_Zone"
     doc["custom_extensions"][0]["data"] = json.dumps(payload)
     code, diags = _run("validate", str(_write(tmp_path, doc)))
     assert code == 1

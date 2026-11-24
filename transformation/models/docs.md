@@ -55,3 +55,12 @@ This is a property of the business, not missing data. `is_fleet_attributed`
 states it explicitly so that no consumer has to infer it from a null, and so
 that a fleet-level denominator is never taken over the whole fact.
 {% enddocs %}
+
+{% docs borough_flow_trip_count %}
+Billable trips picked up in the month that ran between the pair, at any volume:
+the table carries no floor, so a pair of one trip is published as one (ADR 0018).
+
+A pair-month with no billable trip is a row of zero, not a missing row, so this
+column sums to the window's billable trips over the whole table. It is not the
+`trip_count` metric of the trip grain: the non-billable trips are excluded here.
+{% enddocs %}
