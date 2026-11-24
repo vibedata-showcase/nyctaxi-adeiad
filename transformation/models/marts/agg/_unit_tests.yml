@@ -1,0 +1,143 @@
+version: 2
+
+unit_tests:
+  # --- agg_borough_flow_monthly: the population and both shares --------------
+  - name: borough_flow_merges_unresolved_labels
+    description: >
+      Zones the TLC carries as Unknown and as N/A both land in one Unresolved
+      row, while EWR keeps its own label because the TLC names it a borough.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd1', pickup_datetime: '2024-01-10 09:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd2', pickup_datetime: '2024-01-11 09:00:00', is_billable: true, total_amount: 20.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd3', pickup_datetime: '2024-01-12 09:00:00', is_billable: true, total_amount: 30.0}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: 'o1', borough_name: Manhattan}
+          - {zone_key: 'd1', borough_name: Unknown}
+          - {zone_key: 'd2', borough_name: N/A}
+          - {zone_key: 'd3', borough_name: EWR}
+    expect:
+      rows:
+        - {origin_borough: Manhattan, destination_borough: Unresolved, trip_count: 2, total_revenue: 30.0}
+        - {origin_borough: Manhattan, destination_borough: EWR, trip_count: 1, total_revenue: 30.0}
+
+  - name: borough_flow_shares_use_the_resolved_denominator
+    description: >
+      The shares are rebuilt over the origin borough's trips whose destination is
+      a named borough. The leaving share repeats on the Unresolved destination
+      row, whose own per-row share is null because its trips are outside the
+      denominator.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd1', pickup_datetime: '2024-01-10 09:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd1', pickup_datetime: '2024-01-11 09:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd1', pickup_datetime: '2024-01-12 09:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd2', pickup_datetime: '2024-01-13 09:00:00', is_billable: true, total_amount: 20.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd3', pickup_datetime: '2024-01-14 09:00:00', is_billable: true, total_amount: 30.0}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: 'o1', borough_name: Manhattan}
+          - {zone_key: 'd1', borough_name: Manhattan}
+          - {zone_key: 'd2', borough_name: Brooklyn}
+          - {zone_key: 'd3', borough_name: N/A}
+    expect:
+      rows:
+        - {destination_borough: Manhattan, destination_trip_share: 0.75, origin_leaving_trip_share: 0.25}
+        - {destination_borough: Brooklyn, destination_trip_share: 0.25, origin_leaving_trip_share: 0.25}
+        - {destination_borough: Unresolved, destination_trip_share: null, origin_leaving_trip_share: 0.25}
+
+  - name: borough_flow_excludes_non_billable_and_out_of_window_trips
+    description: >
+      A non-billable trip and a trip picked up outside the reporting window add
+      no row and no count, because the billable rule and the window are applied
+      here in gold (ADR 0003).
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd1', pickup_datetime: '2024-01-10 09:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd2', pickup_datetime: '2024-01-11 09:00:00', is_billable: false, total_amount: -15.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd2', pickup_datetime: '2023-12-31 23:59:00', is_billable: true, total_amount: 40.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd2', pickup_datetime: '2024-04-01 00:00:00', is_billable: true, total_amount: 50.0}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: 'o1', borough_name: Queens}
+          - {zone_key: 'd1', borough_name: Queens}
+          - {zone_key: 'd2', borough_name: Bronx}
+    expect:
+      rows:
+        - {origin_borough: Queens, destination_borough: Queens, trip_count: 1, total_revenue: 10.0, destination_trip_share: 1.0, origin_leaving_trip_share: 0.0}
+
+  - name: borough_flow_unresolved_destination_share_is_null
+    description: >
+      An origin that sends more trips to an unplaced zone than to named boroughs
+      would otherwise get a per-row share above 1, because those trips are
+      outside the denominator; the row gets null instead while the named-borough
+      shares still sum to 1.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd1', pickup_datetime: '2024-02-10 09:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd1', pickup_datetime: '2024-02-11 09:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd2', pickup_datetime: '2024-02-12 09:00:00', is_billable: true, total_amount: 20.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd2', pickup_datetime: '2024-02-13 09:00:00', is_billable: true, total_amount: 20.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd2', pickup_datetime: '2024-02-14 09:00:00', is_billable: true, total_amount: 20.0}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: 'o1', borough_name: Staten Island}
+          - {zone_key: 'd1', borough_name: Staten Island}
+          - {zone_key: 'd2', borough_name: Unknown}
+    expect:
+      rows:
+        - {origin_borough: Staten Island, destination_borough: Staten Island, trip_count: 2, total_revenue: 20.0, destination_trip_share: 1.0, origin_leaving_trip_share: 0.0}
+        - {origin_borough: Staten Island, destination_borough: Unresolved, trip_count: 3, total_revenue: 60.0, destination_trip_share: null, origin_leaving_trip_share: 0.0}
+
+  - name: borough_flow_shares_are_null_for_an_unresolved_origin
+    description: >
+      A trip that starts in an unplaced zone has no resolved origin to measure
+      against, so both its shares are null and its trips still land in a row, so
+      the totals stay whole.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd1', pickup_datetime: '2024-03-10 09:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: 'o1', dropoff_zone_key: 'd2', pickup_datetime: '2024-03-11 09:00:00', is_billable: true, total_amount: 20.0}
+          - {pickup_zone_key: 'o2', dropoff_zone_key: 'd2', pickup_datetime: '2024-03-11 09:00:00', is_billable: true, total_amount: 20.0}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: 'o1', borough_name: Unknown}
+          - {zone_key: 'o2', borough_name: Brooklyn}
+          - {zone_key: 'd1', borough_name: Brooklyn}
+          - {zone_key: 'd2', borough_name: N/A}
+    expect:
+      rows:
+        - {origin_borough: Unresolved, destination_borough: Brooklyn, trip_count: 1, total_revenue: 10.0, destination_trip_share: null, origin_leaving_trip_share: null}
+        - {origin_borough: Unresolved, destination_borough: Unresolved, trip_count: 1, total_revenue: 20.0, destination_trip_share: null, origin_leaving_trip_share: null}
+        - {origin_borough: Brooklyn, destination_borough: Unresolved, trip_count: 1, total_revenue: 20.0, destination_trip_share: null, origin_leaving_trip_share: null}

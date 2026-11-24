@@ -539,3 +539,56 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+  - name: agg_borough_flow_monthly
+    description: >
+      Trips and revenue from each borough to each borough, by month, with the
+      share of a borough's traffic that leaves it. Billable trips only, in the
+      reporting window. Zones the TLC cannot place in a borough report as one
+      Unresolved group, published but outside the borough counts (ADR 0018), and
+      EWR stays a borough of its own. Unresolved trips stay inside the totals, so
+      sum(trip_count) and sum(total_revenue) over the whole table equal
+      billable_trip_count and billable_revenue for the window; no quality verdict
+      removes a trip (ADR 0004).
+    contract: {enforced: true}
+    columns:
+      - name: trip_month
+        data_type: DATE
+        data_tests: [not_null]
+        description: Pickup month of the row's trips, on the month's first day.
+      - name: origin_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: >
+          Borough the trip started in: one of the boroughs the TLC names, EWR
+          included, or Unresolved for zones it cannot place in a borough.
+          Unknown and N/A are not published as values (ADR 0018).
+      - name: destination_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough the trip ended in, on the same values as origin_borough.
+      - name: trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: >
+          Billable trips picked up in the month that travelled from this origin
+          borough to this destination borough.
+      - name: total_revenue
+        data_type: DOUBLE
+        data_tests: [not_null]
+        description: Total amount charged on the row's billable trips.
+      - name: destination_trip_share
+        data_type: DOUBLE
+        description: >
+          The row's share of its origin borough's trips that month, over the
+          origin's trips resolved to a named borough at both ends. Null on a row
+          whose destination is Unresolved, whose trips are outside that
+          denominator. The non-null shares of one origin borough and month sum
+          to 1 (ADR 0019).
+      - name: origin_leaving_trip_share
+        data_type: DOUBLE
+        description: >
+          Share of the origin borough's trips in the month that ended in a
+          different named borough, over the same denominator. Repeats on every
+          row of that origin borough and month, the Unresolved destination row
+          included: do not sum it. Null only when the origin borough has no trip
+          resolved to a named borough (ADR 0019).
