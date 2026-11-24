@@ -65,3 +65,4 @@ None.
 
 ## Approvals
 
+- 2026-11-24T17:42:54Z — requirement approved — "Approve and stop" — aec0fda
