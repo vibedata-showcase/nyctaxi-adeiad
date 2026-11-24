@@ -23,4 +23,4 @@ A flow reported between boroughs is published for every borough pair in each mon
 
 ## Affected designs
 
-None yet: the borough-flow design record is written when this intent is designed.
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
