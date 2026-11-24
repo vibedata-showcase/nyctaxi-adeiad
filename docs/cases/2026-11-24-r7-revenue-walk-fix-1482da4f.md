@@ -133,3 +133,5 @@ carried in `## Open questions` below.
   2026-11-24). Reopen as its own case.
 
 ## Approvals
+- 2026-11-24T08:08:36Z — design approved — "approve" — 38cb9f7
+- 2026-11-24T08:08:36Z — breaking contract approved — core.fct_trip 2.0.0: fare_residual keeps its name and DOUBLE type, and its value becomes the total minus every modelled component including the airport fee; the corrected value reaches existing rows only through a full refresh of the fact, and "abort" was offered first with a dual-write cutover beside it — 38cb9f7
