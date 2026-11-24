@@ -1,0 +1,54 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: 3f18107b-9d44-4875-b406-e47e270acaae
+name: agg_borough_flow_monthly
+version: 1.0.0
+status: proposed
+servers:
+  - server: sample-nyctaxi-comp
+    type: duckdb
+    database: domain.duckdb
+    schema: agg
+schema:
+  - name: agg_borough_flow_monthly
+    dataGranularityDescription: One row per month, origin borough and destination borough that carries at least one billable trip picked up inside the reporting window. A borough pair with no billable trips in a month has no row.
+    properties:
+      - name: trip_month
+        logicalType: date
+        physicalType: DATE
+        required: true
+        primaryKey: true
+        primaryKeyPosition: 1
+        description: "Pickup month of the row's trips, on the month's first day."
+      - name: origin_borough
+        logicalType: string
+        physicalType: VARCHAR
+        required: true
+        primaryKey: true
+        primaryKeyPosition: 2
+        description: "Borough the trip started in: one of the boroughs the TLC names, EWR included, or Unresolved for zones it cannot place in a borough. Unknown and N/A are not published as values; their trips report as Unresolved (ADR 0018)."
+      - name: destination_borough
+        logicalType: string
+        physicalType: VARCHAR
+        required: true
+        primaryKey: true
+        primaryKeyPosition: 3
+        description: "Borough the trip ended in, on the same values as origin_borough."
+      - name: trip_count
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        description: "Billable trips picked up in the month that travelled from this origin borough to this destination borough. Summed over the whole table it equals billable_trip_count for the window, because no quality verdict removes a trip (ADR 0004) and unresolved trips stay in (ADR 0012)."
+      - name: total_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        required: true
+        description: "Total amount charged on the row's billable trips. Summed over the whole table it equals billable_revenue for the window."
+      - name: destination_trip_share
+        logicalType: number
+        physicalType: DOUBLE
+        description: "The row's share of its origin borough's trips that month, over the origin's trips resolved to a named borough at both ends. Null on a row whose destination is Unresolved, whose trips are outside that denominator. The non-null shares of one origin borough and month sum to 1 (ADR 0019)."
+      - name: origin_leaving_trip_share
+        logicalType: number
+        physicalType: DOUBLE
+        description: "Share of the origin borough's trips in the month that ended in a different named borough, over the same denominator. Repeats on every row of that origin borough and month, the Unresolved destination row included: do not sum it. Null only when the origin borough has no trip resolved to a named borough (ADR 0019)."
