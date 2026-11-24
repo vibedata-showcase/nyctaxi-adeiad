@@ -62,6 +62,9 @@
 | Python lint | `ruff check tests transformation` | 0 | pass — `All checks passed!` |
 | SQL lint | `sqlfluff lint transformation/models` | 0 | pass — `All Finished!` |
 | ADR link hygiene | `tests/test_adr_links.py`, inside the pytest run, plus a link-resolution read of every markdown link in the three intent records | 0 | pass — `2 passed`; one dangling ADR 0018 link found by the read and fixed in `77e73ea` |
+| contract-validation build | `dbt build --select agg_trip_zone_daily mart_daily_zone_revenue --exclude test_type:unit` | 0 | pass — `PASS=13 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=14`; both touched models are already `contract: {enforced: true}` with a `data_type` on every column, so nothing needed promoting, and the enforced contracts raise no `contract violation`. The warning is the same pre-existing `LTS5` sentinel |
+| contract sandbox destination | `python3 .../scripts/assert_dbt_destination.py`, right after that build | 0 | pass — `DESTINATION_OK: 2 built relation(s) landed in the sandbox ephm_nyc-taxi-analytics_new-intent-c61d6ba4` |
+| domain sweep | read of `CONTEXT.md` against every term the Requirement, ADRs and design records introduce | - | `domain sweep: nothing new` — `billable`, `reporting window`, `zone`, `borough` and `day` are already glossed, `reporting_region` is a pre-existing boundary column this intent only re-exposes, and ADR 0018 records the decision that cleared the ADR bar |
 
 ## Findings
 
