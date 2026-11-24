@@ -76,6 +76,13 @@ The trips between one pickup zone and one dropoff zone.
 **Published flow**:
 An origin-destination pair with at least 25 billable trips in the reporting window, the population the origin-destination matrix reports (ADR 0017). Narrower than a flow: a pair below the floor exists in the trips but is not published.
 
+**Cross-borough trip**:
+A trip that starts in one New York City borough and ends in another. A trip whose destination is an unresolved zone is not cross-borough: its destination borough is unknown, so it neither leaves the origin's borough nor stays in it, and it is reported in its own group (ADR 0018).
+_Not_: any trip between two different borough labels, because that would read a trip to an unresolved zone as traffic crossing a borough line.
+
+**EWR**:
+Newark Liberty airport's zone: a borough value in the TLC zone lookup for a place that is not one of New York City's boroughs. It is not a city borough, so a rollup of the city's boroughs leaves it out (ADR 0018).
+
 **Medallion**:
 The licence to operate a taxi. It is transferable: the licence outlives the vehicle it currently covers and the driver who currently holds it, so it is neither of them.
 _Not_: the bronze, silver and gold layering, which is a platform term defined elsewhere.
