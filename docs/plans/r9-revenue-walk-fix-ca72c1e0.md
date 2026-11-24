@@ -38,11 +38,11 @@
 
 **Requirements:** the case's decision · **Design:** `docs/design/models/finance/mart_revenue_component_bridge.md` · **Skill:** `generating-dbt-model` · **Depends on:** none
 
-- [ ] Author `transformation/tests/assert_revenue_bridge_components_sum_to_total.sql`: group `mart_revenue_component_bridge` by `trip_month`, `service_type_key`, `borough_name`, take `max(total_amount)` once per group and `sum(component_amount)`, and return every group where `abs(component_total - total_amount) > 0.01`. A comment says why the total is read once per group. No unit test is needed: the macro this guards has no branch, only arithmetic.
-- [ ] Add the test to `test-map.json` under `modules.finance.data`.
-- [ ] Run `cd transformation && dbt deps`, then `dbt test --select assert_revenue_bridge_components_sum_to_total`; expect **FAIL** reporting the 44 groups whose components miss their total by the airport fee — the signal recorded in the case.
-- [ ] Run `python3 -m pytest tests/test_maps.py -q`; expect exit 0.
-- [ ] Commit and push `transformation/tests/assert_revenue_bridge_components_sum_to_total.sql` and `test-map.json`.
+- [x] Author `transformation/tests/assert_revenue_bridge_components_sum_to_total.sql`: group `mart_revenue_component_bridge` by `trip_month`, `service_type_key`, `borough_name`, take `max(total_amount)` once per group and `sum(component_amount)`, and return every group where `abs(component_total - total_amount) > 0.01`. A comment says why the total is read once per group. No unit test is needed: the macro this guards has no branch, only arithmetic.
+- [x] Add the test to `test-map.json` under `modules.finance.data`.
+- [x] Run `cd transformation && dbt deps`, then `dbt test --select assert_revenue_bridge_components_sum_to_total`; expect **FAIL** reporting the groups whose components miss their total by the airport fee — it fails on **9** groups totalling 12,262.25 (the case's 44 groups is the whole walk; only the ones carrying a fee can miss).
+- [x] Run `python3 -m pytest tests/test_maps.py -q`; expect exit 0.
+- [x] Commit and push `transformation/tests/assert_revenue_bridge_components_sum_to_total.sql` and `test-map.json`.
 
 ### Task 2: take the airport fee out of the residual
 
@@ -67,3 +67,8 @@
 - [ ] Commit and push the contract, the model comment and whatever `generate` rewrote.
 
 ## Execution evidence
+- Task 1: `cd transformation && dbt deps` — exit 0 — packages installed (dbt_project_evaluator 1.4.1, up to date)
+- Task 1: `cd transformation && dbt test --target dev --select assert_revenue_bridge_components_sum_to_total --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` — exit 0 with `ERROR=1`, `Got 9 results, configured to fail if != 0` — the intended failure before the fix. The 9 groups are three months x {Manhattan, Queens, Unknown}, differences 5.25/3984.75/7.00, 3.50/3543.75/3.50, 1.75/4705.75/7.00, summing to 12,262.25. `lakehouse_query` on ephemeral lists them (`finance.mart_revenue_component_bridge`, target `ephemeral`).
+- Task 1: `python3 -m pytest tests/test_maps.py -q` — exit 0 — `30 passed in 54.80s`
+- Task 1: profiling verdicts — `core.fct_trip` **Ready** (`domain`; declared: boundary layer, `repo_base` design record; 95,958 billable in-window trips, `fare_residual` and `airport_fee` DOUBLE, residual equals the fee on 5,942 of 7,184 fee trips) and `core.dim_zone` **Ready** (`domain`; 0 billable in-window trips without a zone key, so the bridge's inner join covers the fact). No relation unprofiled; `BRONZE_INADEQUATE` not reached.
+- Task 1: `transformation/tests/assert_revenue_bridge_components_sum_to_total.sql` — sha256:<161136529d3154ce9a4b472889d437c7eaee22025dabd3c8cf6a9bc753126320>
