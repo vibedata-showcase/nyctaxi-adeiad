@@ -45,6 +45,11 @@
 | ADR lint | `python3 .github/scripts/adr_lint.py` | 0 | pass — no duplicate numbers, no dangling references |
 | ADR links | `python3 -m pytest tests/test_adr_links.py -q` | 0 | pass — every ADR this record cites lists the design record and vice versa |
 | dev-artifact scan | `grep` for `dev_mode`, `.add_limit(`, a hardcoded environment id, an edited profile target across the changed paths | 0 | pass — none present; no profile, target or adapter was edited |
+| ship currency | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/ship_currency.py --rows .agents_tmp/ship-currency-rows.json` | 0 | pass — `{"fresh": true, "stale": [], "exempt_commits": []}` |
+| ship contract promotion | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/diff_manifest_contract.py /tmp/base_manifest.json transformation/target/manifest.json` | 0 | pass — `weaker: []`, so no breaking delta; one `stronger` entry, the new enforced contract on `agg_borough_flow_matrix`. Nothing further to promote. |
+| ship contract validation | `cd transformation && dbt build --select agg_borough_flow_matrix --target dev` | 0 | pass — `PASS=18 WARN=0 ERROR=0`; no `contract violation` |
+| ship contract destination | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/assert_dbt_destination.py` | 0 | pass — `DESTINATION_OK: 1 built relation(s)` |
+| domain sweep | inspection of `CONTEXT.md` and `docs/adr/` | 0 | `domain sweep: nothing new` — **Cross-borough trip** and **EWR** were already added with the Requirement, and ADR 0018 already records the population decisions |
 
 ## Weakening
 
