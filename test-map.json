@@ -194,7 +194,6 @@
         ".agents/skills/validating-data-contract/"
       ],
       "unit": [
-        "tests/test_odcs.py",
         "tests/test_odcs_contracts.py"
       ],
       "commands": {

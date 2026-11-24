@@ -23,7 +23,7 @@ denominator as (
         month_start_date,
         origin_borough,
         max(origin_billable_trip_count) as published_denominator,
-        sum(trip_count) as summed_trips
+        sum(billable_trip_count) as summed_trips
     from {{ ref('agg_borough_flow_monthly') }}
     where not origin_is_unresolved
     group by 1, 2

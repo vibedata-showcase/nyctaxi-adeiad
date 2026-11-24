@@ -20,7 +20,7 @@ with fact as (
 mart as (
     select
         month_start_date,
-        sum(trip_count) as trip_count,
+        sum(billable_trip_count) as trip_count,
         sum(billable_revenue) as billable_revenue
     from {{ ref('agg_borough_flow_monthly') }}
     group by 1
