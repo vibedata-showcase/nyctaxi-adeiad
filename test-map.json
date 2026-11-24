@@ -87,7 +87,8 @@
         "transformation/tests/assert_aggs_cover_every_trip.sql",
         "transformation/tests/assert_od_flow_floor.sql",
         "transformation/tests/assert_borough_flow_reconciles_to_billable_trips.sql",
-        "transformation/tests/assert_borough_flow_shares_sum_to_one.sql"
+        "transformation/tests/assert_borough_flow_shares_sum_to_one.sql",
+        "transformation/tests/assert_borough_flow_grid_is_complete.sql"
       ],
       "selectors": {
         "data": "path:models/marts/agg",
