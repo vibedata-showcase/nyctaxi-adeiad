@@ -61,3 +61,4 @@ None. Three things the answers do not settle are recorded for design, not for yo
 - whether the two counts beside the share are exposed as columns or only implied by the rows. R-05 asks for them, so design records them.
 
 ## Approvals
+- 2026-11-24T14:13:23Z — requirement approved — "Approve the Requirement and start the design" — d97f630
