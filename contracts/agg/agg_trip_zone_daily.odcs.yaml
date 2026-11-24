@@ -2,7 +2,7 @@ apiVersion: v3.2.0
 kind: DataContract
 id: 6767ad11-6380-5435-8382-25fdafb31a75
 name: agg_trip_zone_daily
-version: 1.0.1
+version: 1.1.0
 status: active
 servers:
   - server: sample-nyctaxi-comp
@@ -27,6 +27,10 @@ schema:
       - name: borough_name
         logicalType: string
         physicalType: VARCHAR
+      - name: reporting_region
+        logicalType: string
+        physicalType: VARCHAR
+        description: Region the pickup zone belongs to, from the zone dimension.
       - name: trip_count
         logicalType: integer
         physicalType: BIGINT
@@ -39,6 +43,60 @@ schema:
       - name: attributed_driver_count
         logicalType: integer
         physicalType: BIGINT
+      - name: billable_trip_count
+        logicalType: integer
+        physicalType: BIGINT
+        description: Trips whose total amount is positive, in the reporting window (ADR 0003); 0 when the zone-day has trips but none is billable.
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: billable_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of total_amount over the billable trips; 0 when the zone-day has no billable trip.
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: billable_fare_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of fare_amount over the billable trips; 0 when the zone-day has no billable trip.
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: billable_tip_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of tip_amount over the billable trips; 0 when the zone-day has no billable trip.
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: billable_surcharge_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of total_surcharges over the billable trips; 0 when the zone-day has no billable trip.
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: billable_toll_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of tolls_amount over the billable trips; 0 when the zone-day has no billable trip.
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
       - name: prev_day_trip_count
         logicalType: integer
         physicalType: BIGINT
