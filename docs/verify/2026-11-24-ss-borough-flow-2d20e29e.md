@@ -151,44 +151,123 @@ from p group by 1 order by 1
 
 Requirements R-02 and R-04 cite these figures; the 25-trip floor question is settled by ADR 0018.
 
-### Cross-borough share, per origin borough (R-03)
+### Cross-borough share, per origin borough (R-03, R-07)
+
+The share is measured on resolved boroughs only: `Unknown` and `N/A` are not borough members (ADR 0020), so their rows are outside both the numerator and the denominator while staying in the totals.
 
 Query as it ran:
 
 ```sql
 with p as (
-  select date_trunc('month', f.pickup_date) as m, o.borough_name as ob, dz.borough_name as db,
+  select date_trunc('month', f.pickup_date) as m,
+         o.borough_name as ob, o.is_unresolved_zone as ob_u,
+         dz.borough_name as db, dz.is_unresolved_zone as db_u,
+         count(*) as trips
+  from core.fct_trip f
+  join core.dim_zone o on f.pickup_zone_key = o.zone_key
+  join core.dim_zone dz on f.dropoff_zone_key = dz.zone_key
+  where f.is_billable and f.pickup_date >= date '2024-01-01' and f.pickup_date < date '2024-04-01'
+  group by 1, 2, 3, 4, 5
+), t as (
+  select m, ob, ob_u,
+    sum(trips) as origin_trips,
+    sum(case when not db_u and ob <> db then trips else 0 end) as crossing_trips
+  from p group by 1, 2, 3
+)
+select m, ob, ob_u as origin_unresolved, origin_trips, crossing_trips,
+  case when ob_u then null else round(100.0 * crossing_trips / origin_trips, 2) end as share_pct
+from t order by m, origin_trips desc
+```
+
+January 2024:
+
+| origin | origin_unresolved | origin_trips | crossing_trips | share_pct |
+| --- | --- | --- | --- | --- |
+| Manhattan | false | 26,593 | 1,470 | 5.53 |
+| Queens | false | 2,807 | 1,914 | 68.19 |
+| Brooklyn | false | 349 | 129 | 36.96 |
+| Bronx | false | 108 | 63 | 58.33 |
+| Unknown | true | 98 | 24 | null |
+| N/A | true | 13 | 3 | null |
+| Staten Island | false | 11 | 5 | 45.45 |
+| EWR | false | 6 | 0 | 0.00 |
+
+February and March, resolved boroughs only:
+
+| month | borough | origin_trips | crossing_trips | share_pct |
+| --- | --- | --- | --- | --- |
+| 2024-02 | Manhattan | 26,908 | 1,454 | 5.40 |
+| 2024-02 | Queens | 2,524 | 1,764 | 69.89 |
+| 2024-02 | Brooklyn | 381 | 154 | 40.42 |
+| 2024-02 | Bronx | 83 | 53 | 63.86 |
+| 2024-02 | Staten Island | 5 | 0 | 0.00 |
+| 2024-02 | EWR | 2 | 0 | 0.00 |
+| 2024-03 | Manhattan | 31,744 | 1,770 | 5.58 |
+| 2024-03 | Queens | 3,341 | 2,373 | 71.03 |
+| 2024-03 | Brooklyn | 572 | 244 | 42.66 |
+| 2024-03 | Bronx | 151 | 76 | 50.33 |
+| 2024-03 | Staten Island | 9 | 3 | 33.33 |
+| 2024-03 | EWR | 4 | 0 | 0.00 |
+
+R-03 cites January Manhattan 5.53% and Queens 68.19%; ADR 0019 records the basis and ADR 0020 the exclusion.
+
+### Network totals with unresolved zones excluded from the share (R-05, R-07)
+
+Query as it ran:
+
+```sql
+with p as (
+  select date_trunc('month', f.pickup_date) as m,
+         o.borough_name as ob, o.is_unresolved_zone as ob_u,
+         dz.borough_name as db, dz.is_unresolved_zone as db_u,
          count(*) as trips, sum(f.total_amount) as rev
   from core.fct_trip f
   join core.dim_zone o on f.pickup_zone_key = o.zone_key
   join core.dim_zone dz on f.dropoff_zone_key = dz.zone_key
-  where f.is_billable group by 1, 2, 3
-), t as (select m, ob, sum(trips) as origin_trips, sum(case when ob <> db then trips else 0 end) as leaving from p group by 1, 2)
-select m, ob, origin_trips, leaving, round(100.0 * leaving / origin_trips, 2) as share_leaving_pct from t order by m, ob
+  where f.is_billable and f.pickup_date >= date '2024-01-01' and f.pickup_date < date '2024-04-01'
+  group by 1, 2, 3, 4, 5
+)
+select m, sum(trips) as all_trips, round(sum(rev), 2) as all_revenue,
+  sum(case when not ob_u then trips else 0 end) as resolved_origin_denom,
+  sum(case when not ob_u and not db_u and ob <> db then trips else 0 end) as crossing_resolved,
+  sum(case when not ob_u and db_u then trips else 0 end) as resolved_origin_unresolved_dest,
+  sum(case when ob_u then trips else 0 end) as unresolved_origin,
+  round(sum(case when not ob_u and not db_u and ob <> db then rev else 0 end), 2) as crossing_rev
+from p group by 1 order by 1
 ```
 
-January 2024 rows (the other two months are recorded in the same run):
+| month | all_trips | all_revenue | resolved_origin_denom | crossing_resolved | resolved_origin_unresolved_dest | unresolved_origin |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2024-01 | 29,985 | 816,057.76 | 29,874 | 3,581 | 225 | 111 |
+| 2024-02 | 30,017 | 813,885.68 | 29,903 | 3,425 | 186 | 114 |
+| 2024-03 | 35,956 | 999,242.38 | 35,821 | 4,466 | 229 | 135 |
 
-| origin borough | origin_trips | leaving | share_leaving_pct |
-| --- | --- | --- | --- |
-| Bronx | 108 | 64 | 59.26 |
-| Brooklyn | 349 | 131 | 37.54 |
-| EWR | 6 | 0 | 0.00 |
-| Manhattan | 26,593 | 1,598 | 6.01 |
-| N/A | 13 | 4 | 30.77 |
-| Queens | 2,807 | 2,008 | 71.54 |
-| Staten Island | 11 | 5 | 45.45 |
-| Unknown | 98 | 24 | 24.49 |
+The `all_trips` and `all_revenue` columns are the closure the mart must reproduce: they include the unresolved rows that the share leaves out.
 
-R-03 cites January Manhattan 6.01% and Queens 71.54%; ADR 0019 records the choice of basis.
+### Quality verdicts present on the population (D-14, ADR 0004)
 
-The alternative network-wide basis, for contrast only — the same run aggregated over origin boroughs:
+Query as it ran:
 
-| month | network share, all pairs | resolved-NYC-only basis |
-| --- | --- | --- |
-| 2024-01 | 12.79 | 11.74 |
-| 2024-02 | 12.15 | 11.24 |
-| 2024-03 | 13.16 | 12.24 |
+```sql
+select
+  count(*) as billable_trips,
+  count(*) filter (where q.is_zero_distance) as zero_distance,
+  count(*) filter (where q.is_implausibly_short) as implausibly_short,
+  count(*) filter (where q.is_implausibly_fast) as implausibly_fast,
+  count(*) filter (where q.is_sparse_vendor_feed) as sparse_feed,
+  count(*) filter (where q.is_unresolved_pickup_zone) as unres_pickup,
+  count(*) filter (where q.is_clean_trip) as clean_trips,
+  round(sum(f.total_amount), 2) as total_rev
+from core.fct_trip f
+join core.dim_trip_quality q on f.trip_quality_key = q.trip_quality_key
+where f.is_billable and f.pickup_date >= date '2024-01-01' and f.pickup_date < date '2024-04-01'
+```
+
+| billable_trips | zero_distance | implausibly_short | implausibly_fast | sparse_feed | unres_pickup | clean_trips | total_rev |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 95,958 | 2,204 | 864 | 39 | 7,439 | 360 | 93,239 | 2,629,185.82 |
+
+These are the verdicts a filter could have removed and this model does not (ADR 0004). The row is recorded here so the design record does not carry a measurement.
 
 ### Unresolved and out-of-state exposure (R-05)
 
@@ -214,7 +293,7 @@ from p group by 1 order by 1
 | 2024-02 | 30,017 | 300 | 367 | 26,370 | 3,458 |
 | 2024-03 | 35,956 | 364 | 451 | 31,223 | 4,504 |
 
-R-05 requires these groups to be present rather than dropped; ADR 0019 records that an unresolved destination counts as leaving the origin.
+R-05 requires these groups to be present rather than dropped. Under ADR 0020 the `touching_unresolved` trips stay in the totals but are removed from the share; the share measurement above shows the effect per borough.
 
 ### Revenue definition (R-02)
 

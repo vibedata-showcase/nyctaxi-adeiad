@@ -7,9 +7,11 @@ date: 2026-11-24
 
 "Share of trips that leave the borough they started in" is reported **per origin borough and period**: the billable trips picked up in that borough and set down in a different one, divided by all billable trips picked up in that borough. The borough flow mart carries it once per origin borough per month, on every row of that borough's matrix rows, so the denominator is visible beside each numerator.
 
-The network figure is a different measure and is not what this surface publishes. In January 2024 the two differ by more than a factor of two: Manhattan sends 6.0% of its trips outside its own boundary while Queens sends 71.5%, and the city-wide figure of 12.8% describes neither borough. A single network number would be dominated by Manhattan's volume and would answer "how much of the city's traffic crosses a line" rather than the question asked.
+The network figure is a different measure and is not what this surface publishes. In January 2024 the two differ sharply: Manhattan sends 5.5% of its trips outside its own boundary while Queens sends 68.2%, and a single city-wide number describes neither borough. A single network number would be dominated by Manhattan's volume and would answer "how much of the city's traffic crosses a line" rather than the question asked.
 
-The grouping follows the zone dimension's own borough attribute, so an unresolved borough (`Unknown`, `N/A`) is an origin like any other and its trips are counted, per ADR 0012. A trip whose destination borough is unresolved counts as leaving the origin borough, because it did not stay inside it.
+The grouping follows the zone dimension's own borough attribute. `Unknown` and `N/A` are not boroughs: they are the dimension's marker for a zone no borough can be assigned to (ADR 0012), so they are no member of the borough level. Their trips keep their own rows in the matrix and stay inside the published totals, but they are outside the share — they contribute no numerator and no denominator, and their rows carry a null share. ADR 0020 records that exclusion and why.
+
+A trip picked up in a real borough and set down in an unresolved zone stays in that borough's denominator: it was that borough's traffic, and the origin is known even though the destination is not. It does not enter the numerator, because "leaving the borough" means arriving in another borough and an unresolved destination is not one.
 
 ## Considered options
 
@@ -20,8 +22,9 @@ The grouping follows the zone dimension's own borough attribute, so an unresolve
 ## Consequences
 
 - The share is not additive across origin boroughs: a borough's share applies to that borough, and summing the column means nothing.
+- Unresolved rows carry a null share, so a consumer averaging the column must decide whether to include them; the published numerator and denominator let it exclude or rebuild as it needs.
 - A reader who wants the network figure aggregates the mart's trips and crossing trips themselves, and gets a different, clearly-labelled number.
-- The share is computed from the same rows as the matrix, so it can never disagree with the trips and revenue published beside it.
+- The share's denominator is the sum of the origin borough's own `trip_count` cells, so it can never disagree with the trips published beside it; only the numerator narrows, by the unresolved-destination cells.
 - A change to how boroughs are assigned changes this measure, and it is a decision to record rather than a filter to add quietly.
 
 ## Affected designs
