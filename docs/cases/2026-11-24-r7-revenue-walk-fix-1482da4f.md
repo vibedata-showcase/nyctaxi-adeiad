@@ -112,10 +112,24 @@ column. ADR check: consistent with [ADR 0003](../../docs/adr/0003-billable-trip-
 (which trips the walk counts, unchanged) and restores the definition `CONTEXT.md`
 and the Ossie document already state; no ADR is contradicted or superseded.
 
-**Found, not fixed** — for a decision at the design stop, outside this case's
-scope: (a) the green `2024-02` `N/A`-borough group carries 8 component lines
-because `sum(congestion_surcharge)` is NULL there and the unpivot drops the row;
-(b) the `±2.50` residual that survives the fix, `26,457` trips, is a second
-signal that some totals do not equal their modelled parts.
+**Found, not fixed** — put to the user at the design stop and kept out of this
+case on their answer: (a) the green `2024-02` `N/A`-borough group carries 8
+component lines because `sum(congestion_surcharge)` is NULL there and the unpivot
+drops the row; (b) the `±2.50` residual that survives the fix, `26,457` trips, is
+a second signal that some totals do not equal their modelled parts. Both are
+carried in `## Open questions` below.
+
+## Open questions
+
+- **(a)** The walk emits no line for a component whose aggregate is NULL, so a
+  group can carry eight rows where nine are expected. Recorded as behaviour in
+  [`models/finance/mart_revenue_component_bridge.md`](../design/models/finance/mart_revenue_component_bridge.md)
+  `D-02`; left unfixed by this case (user answer, 2026-11-24). Reopen when a
+  consumer needs all nine names present.
+- **(b)** A `±2.50` residual (with a tail of `±1.00`–`±4.50`) survives the fix on
+  `26,457` in-window trips and totals `−32,648.75`; `ehail_fee` is `0.00`
+  everywhere, so it is a component value that disagrees with the total rather
+  than an unmodelled column. Left unfixed by this case (user answer,
+  2026-11-24). Reopen as its own case.
 
 ## Approvals
