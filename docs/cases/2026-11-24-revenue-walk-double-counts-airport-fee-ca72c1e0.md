@@ -64,3 +64,4 @@ Decisions check: consistent with `CONTEXT.md` `Fare residual` and `Fare componen
 - The fix only reaches history through a `--full-refresh` of `fct_trip`, which is incremental by `trip_key` over a closed window: an incremental run would process no row. The rebuild is done in the sandbox here, and production needs the same full refresh when the branch is deployed.
 
 ## Approvals
+- 2026-11-24T10:23:43Z — design approved — "approve" — 5a96869
