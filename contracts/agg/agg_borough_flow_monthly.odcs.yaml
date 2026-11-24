@@ -1,0 +1,70 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: 4882e4d3-a5ff-49cb-a009-62c8e150bab4
+name: agg_borough_flow_monthly
+version: 1.0.0
+status: active
+servers:
+  - server: sample-nyctaxi-comp
+    type: duckdb
+    database: domain.duckdb
+    schema: agg
+schema:
+  - name: agg_borough_flow_monthly
+    dataGranularityDescription: Trip month x origin borough group x destination borough group, the full grid of the reporting window's months, including cells with no trips. A group is one of the six TLC boroughs or 'unresolved', which carries the trips no zone places in a borough. Flows carry no trip floor (ADR 0018).
+    properties:
+      - name: trip_month
+        description: "First day of the pickup month; the months of the reporting window only."
+        logicalType: date
+        physicalType: DATE
+        primaryKey: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: origin_borough
+        description: "Borough of the pickup zone, or 'unresolved' when no zone places the pickup in a borough (ADR 0012)."
+        logicalType: string
+        physicalType: VARCHAR
+        primaryKey: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: dest_borough
+        description: "Borough of the dropoff zone, or 'unresolved' when no zone places the dropoff in a borough (ADR 0012)."
+        logicalType: string
+        physicalType: VARCHAR
+        primaryKey: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: is_intra_borough
+        description: "True when both ends name the same group, so true for the borough (Manhattan, Manhattan) and for ('unresolved', 'unresolved') alike; a trip that leaves its borough is the false row."
+        logicalType: boolean
+        physicalType: BOOLEAN
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: trip_count
+        description: "Billable trips picked up in the month from the origin group to the destination group; 0 for a pair with no trips, since the grid keeps every cell."
+        logicalType: integer
+        physicalType: BIGINT
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: total_revenue
+        description: "Sum of total_amount over those billable trips; 0 for a pair with no trips."
+        logicalType: number
+        physicalType: DOUBLE
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: share_of_origin_borough_trips
+        description: "Share of the origin borough's month that ended in the destination borough, from summed billable trips (ADR 0016); null when either end is 'unresolved', because a trip no zone places in a borough has no borough denominator."
+        logicalType: number
+        physicalType: DOUBLE

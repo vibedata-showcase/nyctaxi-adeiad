@@ -366,6 +366,19 @@ where
 union all
 
 select distinct
+    'trips.LTS10_borough_flow_monthly: trips_to_date month key is no member' as finding,
+    cast(a.trip_month as {{ dbt.type_string() }}) as member_key
+from {{ ref('agg_borough_flow_monthly') }} as a
+where
+    a.trip_month is not null
+    and not exists (
+        select 1 from {{ ref('dim_date') }} as d
+        where d.month_start_date = a.trip_month
+    )
+
+union all
+
+select distinct
     'shift.LTS2_driver_day: shift_to_date day key is no member' as finding,
     cast(a.shift_date as {{ dbt.type_string() }}) as member_key
 from {{ ref('agg_driver_daily') }} as a

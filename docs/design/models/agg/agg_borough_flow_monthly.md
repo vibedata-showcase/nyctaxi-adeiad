@@ -30,6 +30,7 @@ One row per (month, origin borough, destination borough), covering every month i
 - `D-12` No existing model is edited: the change is the new model, its properties entry, its contract and the canonical document entry, so `fct_trip`, `dim_zone`, `agg_od_flow_matrix` and every mart keep their SQL, properties and values. Source: R-08.
 - `D-13` The share is a rate, so it is rebuilt from summed trip counts through `safe_divide` and never as an average of pair shares, with a null where the denominator is zero. Source: ADR 0016.
 - `D-14` No quality verdict filters a trip: a billable trip flagged implausibly short, fast, zero-distance or unresolved stays in its flow. The only exclusion is the billable rule, and this record states it. Source: ADR 0004; R-02.
+- `D-15` `LTS10_borough_flow_monthly` claims the month content level and binds `billable_trip_count` to `trip_count` and `billable_revenue` to `total_revenue` there; the origin and destination borough roles stay in the source's grain and its `physical_joins` but declare no level. The `unresolved` group is no member of the Geography level, and no row predicate can state the sentinel away because the table genuinely holds those rows, so a borough-level binding cannot hold: the generated `assert_semantic_content_holds` rejected all 148 unresolved bindings. Borough-grain questions are the detail source's. Supersedes the (month, origin borough, destination borough) clause of `D-11`. Source: R-07; `semantic-model` S3b and S5a; Verification discovery.
 
 ## Logical Model
 
@@ -72,3 +73,4 @@ No metric is added: `billable_trip_count` and `billable_revenue` already measure
 
 - 2026-11-24 — R9 borough flow — created — D-01 to D-12 — terms: none new (Borough flow and Leaving-borough share landed with the Requirement).
 - 2026-11-24 — R9 borough flow — amended at the design stop: one `unresolved` group outside the share, and the ADR 0004 and ADR 0016 decisions added — D-05, D-07, D-08, D-09, D-10, D-11, D-13, D-14 — terms: none new.
+- 2026-11-24 — R9 borough flow — `D-11`'s semantic binding amended at execution: the month level only, because the `unresolved` group is no Geography member — D-15 — terms: none new.

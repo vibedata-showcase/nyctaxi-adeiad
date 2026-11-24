@@ -1,0 +1,47 @@
+version: 2
+
+unit_tests:
+  # --- agg_borough_flow_monthly: the grid, the groups and the share ----------
+  - name: borough_flow_grids_every_month_and_group_pair
+    description: >
+      One month, three groups and every ordered pair: the model publishes nine
+      rows, zero-including the pairs nobody drove. Both unresolved boroughs of the
+      lookup ('Unknown' and 'N/A') land in the single 'unresolved' group, a zone
+      key matching no zone joins to it as well, a non-billable trip and a trip
+      outside the reporting window drop out, and the share divides by the
+      origin's borough destinations only, so a row touching 'unresolved' has
+      none.
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-05', month_start_date: '2024-01-01'}
+          - {calendar_date: '2024-01-20', month_start_date: '2024-01-01'}
+          - {calendar_date: '2023-12-15', month_start_date: '2023-12-01'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: z-manhattan, borough_name: Manhattan}
+          - {zone_key: z-brooklyn, borough_name: Brooklyn}
+          - {zone_key: z-unknown, borough_name: Unknown}
+          - {zone_key: z-na, borough_name: N/A}
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: t1, pickup_date: '2024-01-05', pickup_datetime: '2024-01-05 10:00:00', is_billable: true, total_amount: 10.0, pickup_zone_key: z-manhattan, dropoff_zone_key: z-brooklyn}
+          - {trip_key: t2, pickup_date: '2024-01-05', pickup_datetime: '2024-01-05 11:00:00', is_billable: true, total_amount: 20.0, pickup_zone_key: z-manhattan, dropoff_zone_key: z-manhattan}
+          - {trip_key: t3, pickup_date: '2024-01-20', pickup_datetime: '2024-01-20 09:00:00', is_billable: true, total_amount: 30.0, pickup_zone_key: z-unknown, dropoff_zone_key: z-brooklyn}
+          - {trip_key: t4, pickup_date: '2024-01-20', pickup_datetime: '2024-01-20 09:30:00', is_billable: true, total_amount: 40.0, pickup_zone_key: z-brooklyn, dropoff_zone_key: null}
+          - {trip_key: t5, pickup_date: '2024-01-20', pickup_datetime: '2024-01-20 10:00:00', is_billable: false, total_amount: 50.0, pickup_zone_key: z-manhattan, dropoff_zone_key: z-brooklyn}
+          - {trip_key: t6, pickup_date: '2023-12-20', pickup_datetime: '2023-12-20 10:00:00', is_billable: true, total_amount: 60.0, pickup_zone_key: z-manhattan, dropoff_zone_key: z-brooklyn}
+          - {trip_key: t7, pickup_date: '2024-01-20', pickup_datetime: '2024-01-20 11:00:00', is_billable: true, total_amount: 70.0, pickup_zone_key: z-na, dropoff_zone_key: z-manhattan}
+          - {trip_key: t8, pickup_date: '2024-01-20', pickup_datetime: '2024-01-20 12:00:00', is_billable: true, total_amount: 80.0, pickup_zone_key: z-brooklyn, dropoff_zone_key: z-manhattan}
+    expect:
+      rows:
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, is_intra_borough: true, trip_count: 1, total_revenue: 20.0, share_of_origin_borough_trips: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Brooklyn, is_intra_borough: false, trip_count: 1, total_revenue: 10.0, share_of_origin_borough_trips: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: unresolved, is_intra_borough: false, trip_count: 0, total_revenue: 0.0, share_of_origin_borough_trips: null}
+        - {trip_month: '2024-01-01', origin_borough: Brooklyn, dest_borough: Manhattan, is_intra_borough: false, trip_count: 1, total_revenue: 80.0, share_of_origin_borough_trips: 1.0}
+        - {trip_month: '2024-01-01', origin_borough: Brooklyn, dest_borough: Brooklyn, is_intra_borough: true, trip_count: 0, total_revenue: 0.0, share_of_origin_borough_trips: 0.0}
+        - {trip_month: '2024-01-01', origin_borough: Brooklyn, dest_borough: unresolved, is_intra_borough: false, trip_count: 1, total_revenue: 40.0, share_of_origin_borough_trips: null}
+        - {trip_month: '2024-01-01', origin_borough: unresolved, dest_borough: Manhattan, is_intra_borough: false, trip_count: 1, total_revenue: 70.0, share_of_origin_borough_trips: null}
+        - {trip_month: '2024-01-01', origin_borough: unresolved, dest_borough: Brooklyn, is_intra_borough: false, trip_count: 1, total_revenue: 30.0, share_of_origin_borough_trips: null}
+        - {trip_month: '2024-01-01', origin_borough: unresolved, dest_borough: unresolved, is_intra_borough: true, trip_count: 0, total_revenue: 0.0, share_of_origin_borough_trips: null}

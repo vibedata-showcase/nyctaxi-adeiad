@@ -539,3 +539,43 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+  - name: agg_borough_flow_monthly
+    description: >
+      Borough-to-borough flow: how much traffic leaves the borough it started in.
+      One row per month, origin group and destination group, over the full grid of
+      the reporting window's months, so a pair with no trips is a zero row rather
+      than a missing one. The six TLC boroughs are the groups, plus one
+      'unresolved' group that carries the trips no zone places in a borough
+      (ADR 0012, ADR 0015). Flows carry no trip floor (ADR 0018). The
+      leaving-borough share divides by the month's billable trips from that origin
+      to its borough destinations, so each borough's shares add up to 1; a row
+      that touches 'unresolved' carries no share.
+    contract: {enforced: true}
+    columns:
+      - name: trip_month
+        data_type: DATE
+        data_tests: [not_null]
+        description: First day of the pickup month; the months of the reporting window only.
+      - name: origin_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough of the pickup zone, or 'unresolved' when no zone places the pickup in a borough (ADR 0012).
+      - name: dest_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough of the dropoff zone, or 'unresolved' when no zone places the dropoff in a borough (ADR 0012).
+      - name: is_intra_borough
+        data_type: BOOLEAN
+        data_tests: [not_null]
+        description: True when both ends name the same group, so true for the borough (Manhattan, Manhattan) and for ('unresolved', 'unresolved') alike; a trip that leaves its borough is the false row.
+      - name: trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: Trips, billable or not.
+      - name: total_revenue
+        data_type: DOUBLE
+        data_tests: [not_null]
+        description: Total amount charged on billable trips. Excludes cash tips.
+      - name: share_of_origin_borough_trips
+        data_type: DOUBLE
+        description: Share of the origin borough's month that ended in the destination borough, from summed billable trips (ADR 0016); null when either end is 'unresolved', because a trip no zone places in a borough has no borough denominator.
