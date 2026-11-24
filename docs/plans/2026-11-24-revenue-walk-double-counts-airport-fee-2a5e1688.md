@@ -34,13 +34,13 @@
 
 **Requirements:** `R-01` · **Design:** `docs/design/models/intermediate/int_trip_fare_components.md` · **Skill:** `generating-dbt-model` · **Depends on:** none
 
-- [ ] Add `decomposed_columns()` to `transformation/macros/finance.sql`: `['fare_amount', 'tip_amount', 'tolls_amount'] + surcharge_columns() + ['airport_fee']`, ordered as named.
-- [ ] Rewrite `fare_residual(alias)` in the same file to subtract every column in `decomposed_columns()` from `coalesce(total_amount, 0)`, replacing the four hard-coded subtractions and the `total_surcharges()` call.
-- [ ] Leave `surcharge_columns()` and `total_surcharges()` byte-identical, so `total_surcharges` keeps its meaning and `fct_shift` does not gain the fee twice.
-- [ ] Update the `fare_residual` doc block in `transformation/models/docs.md` to say the residual is the total minus every component the walk publishes, `airport_fee` included, and that the component list is `decomposed_columns()`.
-- [ ] Run `cd transformation && dbt deps` if `transformation/dbt_packages/` is missing, then `cd transformation && dbt parse`; expect exit 0.
-- [ ] Run the acceptance condition of `R-01` at trip grain on the sandbox: `select count(*) filter (where round(coalesce(fare_amount,0)+coalesce(tip_amount,0)+coalesce(tolls_amount,0)+coalesce(extra,0)+coalesce(mta_tax,0)+coalesce(improvement_surcharge,0)+coalesce(congestion_surcharge,0)+coalesce(airport_fee,0)+coalesce(fare_residual,0),2) <> round(coalesce(total_amount,0),2)) from core.fct_trip where {{ in_report_window('pickup_datetime') }}`; expect 0 on a rebuilt `fct_trip` (the pre-fix value is 7,184).
-- [ ] Commit and push `transformation/macros/finance.sql` and `transformation/models/docs.md`.
+- [x] Add `decomposed_columns()` to `transformation/macros/finance.sql`: `['fare_amount', 'tip_amount', 'tolls_amount'] + surcharge_columns() + ['airport_fee']`, ordered as named.
+- [x] Rewrite `fare_residual(alias)` in the same file to subtract every column in `decomposed_columns()` from `coalesce(total_amount, 0)`, replacing the four hard-coded subtractions and the `total_surcharges()` call.
+- [x] Leave `surcharge_columns()` and `total_surcharges()` byte-identical, so `total_surcharges` keeps its meaning and `fct_shift` does not gain the fee twice.
+- [x] Update the `fare_residual` doc block in `transformation/models/docs.md` to say the residual is the total minus every component the walk publishes, `airport_fee` included, and that the component list is `decomposed_columns()`.
+- [x] Run `cd transformation && dbt deps` if `transformation/dbt_packages/` is missing, then `cd transformation && dbt parse`; expect exit 0.
+- [x] Run the acceptance condition of `R-01` at trip grain on the sandbox: `select count(*) filter (where round(coalesce(fare_amount,0)+coalesce(tip_amount,0)+coalesce(tolls_amount,0)+coalesce(extra,0)+coalesce(mta_tax,0)+coalesce(improvement_surcharge,0)+coalesce(congestion_surcharge,0)+coalesce(airport_fee,0)+coalesce(fare_residual,0),2) <> round(coalesce(total_amount,0),2)) from core.fct_trip where {{ in_report_window('pickup_datetime') }}`; expect 0 on a rebuilt `fct_trip` (the pre-fix value is 7,184).
+- [x] Commit and push `transformation/macros/finance.sql` and `transformation/models/docs.md`.
 
 ### Task 2: The bridge's component list
 
@@ -88,3 +88,11 @@
 - [ ] Commit and push `docs/design/models/ops/mart_trip_quality_scorecard.md` and `docs/adr/0018-the-revenue-walk-decomposes-the-total-it-reports.md`.
 
 ## Execution evidence
+
+- Task 1: `cd transformation && dbt deps --target dev` — exit 0 — packages up to date — `transformation/dbt_packages/`
+- Task 1: `cd transformation && dbt parse --target dev` — exit 0 — `dbt=1.12.5`, `duckdb=1.11.0`, project parsed — `transformation/macros/finance.sql`
+- Task 1: `cd transformation && dbt build --select int_trip_fare_components --exclude test_type:unit --target dev` — exit 0 — `PASS=3 WARN=0 ERROR=0 SKIP=0` (view + `unique` + `not_null` on `trip_key`) — `transformation/macros/finance.sql` sha256:1381109059079bbde8cb24bb52eb77055d3d4115767027e9e1094e86088ff320, `transformation/models/docs.md` sha256:f48aeff2563e545d75e1147812c5aecb6d6c0411d09c0384934d37d6dc262750
+- Task 1: `python scripts/assert_dbt_destination.py` — exit 0 — `DESTINATION_OK: 1 built relation(s) landed in the sandbox`
+- Task 1: `python scripts/ephemeral_workspace_marker.py init` — exit 0 — `status: created`
+- Task 1: R-01 acceptance at trip grain, sandbox `intermediate.int_trip_fare_components` — `trips` 97,184, `breaks_identity` 0 (pre-fix `core.fct_trip` read 7,184), `residual_total` -32,648.75
+- Task 1: profiled upstream `intermediate.int_trips_enriched` (read in Discovery above): Ready — one row per trip, every component column present and numeric, `airport_fee` null only on green by design

@@ -19,13 +19,19 @@ an artefact of the instrument.
 {% enddocs %}
 
 {% docs fare_residual %}
-Trip total minus every component this warehouse models: fare, tip, tolls, extra,
-MTA tax, improvement surcharge and congestion surcharge.
+Trip total minus every fare component the revenue walk publishes: fare, tip,
+tolls, extra, MTA tax, improvement surcharge, congestion surcharge and the
+airport fee.
 
-A non-zero residual means either a surcharge TLC introduced that is not yet
+A non-zero residual means either a component TLC introduced that is not yet
 modelled, or a total that was not derived from its parts. It is published as its
 own column, and as its own row in the revenue bridge, rather than being absorbed
 into a real component.
+
+The subtracted list is `decomposed_columns()` in `macros/finance.sql`, and the
+revenue bridge's unpivot names the same components. A component the walk
+publishes and the residual does not subtract is counted twice, which is why
+`assert_revenue_walk_decomposes_total` holds the two together.
 {% enddocs %}
 
 {% docs scd2_asof %}

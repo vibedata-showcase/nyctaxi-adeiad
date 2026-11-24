@@ -18,16 +18,29 @@
 {%- endmacro %}
 
 {#-
+  Every component the revenue walk publishes, in the order the walk reports
+  them. The airport fee is not a surcharge -- it is rated separately and
+  reported in its own column -- so it is named here rather than added to
+  `surcharge_columns()`, whose sum is published in its own right.
+-#}
+{% macro decomposed_columns() -%}
+    {{ return(['fare_amount', 'tip_amount', 'tolls_amount'] + surcharge_columns() + ['airport_fee']) }}
+{%- endmacro %}
+
+{#-
   What the total does not explain. A non-zero residual means either a component
   we do not model, or a total that was not derived from its parts.
+
+  Every component the walk publishes is subtracted. A component missing from
+  the subtraction and present in the walk is counted twice, so the walk no
+  longer decomposes the total it reports.
 -#}
 {% macro fare_residual(alias='t') -%}
     (
         coalesce({{ alias }}.total_amount, 0)
-        - coalesce({{ alias }}.fare_amount, 0)
-        - coalesce({{ alias }}.tip_amount, 0)
-        - coalesce({{ alias }}.tolls_amount, 0)
-        - {{ total_surcharges(alias) }}
+        {%- for c in decomposed_columns() %}
+        - coalesce({{ alias }}.{{ c }}, 0)
+        {%- endfor %}
     )
 {%- endmacro %}
 
