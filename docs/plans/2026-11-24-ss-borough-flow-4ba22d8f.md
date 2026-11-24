@@ -49,9 +49,9 @@
 
 **Requirements:** `R-09`, `R-02`, `R-02b`, `R-04`, `R-05`, `R-06`, `R-08` · **Design:** `docs/design/models/agg/agg_borough_flow_monthly.md` · **Skill:** `data-contract` · **Depends on:** none
 
-- [ ] Author `contracts/agg/agg_borough_flow_monthly.odcs.yaml`: ODCS v3.2.0, `name: agg_borough_flow_monthly`, `version: 1.0.0`, `status: proposed` (the table does not exist yet), server `sample-nyctaxi-comp` / `duckdb` / `domain.duckdb` / schema `agg`, with the seven columns of `D-14`, their logical and physical types, and a `dataGranularityDescription` stating the grain and that a pair-month with no billable trips has no row. `trip_month`, `origin_borough`, `destination_borough`, `trip_count` and `total_revenue` are required; the two share columns are not (`D-16`). No `relationships` rule on either borough column, and no `invalidValues` rule that would list `Unresolved` as a legal borough (`D-15`). Descriptions state: `trip_count` is billable trips picked up in the month; `total_revenue` is the summed total amount of those trips and the table's totals equal the canonical `billable_revenue` because no quality verdict filters a trip (ADR 0004) and the unresolved group stays in (ADR 0012); `origin_leaving_trip_share` repeats across the origin borough's rows and must not be summed; `destination_trip_share` is null on an `Unresolved` destination row.
-- [ ] Run `python3 .agents/skills/data-contract/scripts/odcs.py check`; expect exit 0, with the new contract shape-checked and its orphan and document checks skipped because it is `proposed`.
-- [ ] Commit and push `contracts/agg/agg_borough_flow_monthly.odcs.yaml`.
+- [x] Author `contracts/agg/agg_borough_flow_monthly.odcs.yaml`: ODCS v3.2.0, `name: agg_borough_flow_monthly`, `version: 1.0.0`, `status: proposed` (the table does not exist yet), server `sample-nyctaxi-comp` / `duckdb` / `domain.duckdb` / schema `agg`, with the seven columns of `D-14`, their logical and physical types, and a `dataGranularityDescription` stating the grain and that a pair-month with no billable trips has no row. `trip_month`, `origin_borough`, `destination_borough`, `trip_count` and `total_revenue` are required; the two share columns are not (`D-16`). No `relationships` rule on either borough column, and no `invalidValues` rule that would list `Unresolved` as a legal borough (`D-15`). Descriptions state: `trip_count` is billable trips picked up in the month; `total_revenue` is the summed total amount of those trips and the table's totals equal the canonical `billable_revenue` because no quality verdict filters a trip (ADR 0004) and the unresolved group stays in (ADR 0012); `origin_leaving_trip_share` repeats across the origin borough's rows and must not be summed; `destination_trip_share` is null on an `Unresolved` destination row.
+- [x] Run `python3 .agents/skills/data-contract/scripts/odcs.py check`; expect exit 0, with the new contract shape-checked and its orphan and document checks skipped because it is `proposed`.
+- [x] Commit and push `contracts/agg/agg_borough_flow_monthly.odcs.yaml`.
 
 ### Task 2: agg_borough_flow_monthly
 
@@ -90,3 +90,5 @@
 - [ ] Commit and push `contracts/agg/agg_borough_flow_monthly.odcs.yaml` and any file `generate` rewrote.
 
 ## Execution evidence
+
+- Task 1: `python3 .agents/skills/data-contract/scripts/odcs.py check` — exit 0 — `contracts/agg/agg_borough_flow_monthly.odcs.yaml` — sha256:21c4cefa36cfc0b21c10c95576ec4c676215d6c68e1a8ad4b042c429115bb123 — commit b3a0917 — output: three `info` findings for the pre-existing `semantic_exclusions` relations (`agg_od_flow_matrix`, `core.dim_fare_regime`, `finance.mart_revenue_component_bridge`), no finding for the new contract, which is `status: proposed` so its orphan and document checks are skipped.
