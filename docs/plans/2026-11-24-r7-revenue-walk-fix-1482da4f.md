@@ -61,10 +61,10 @@
 
 **Requirements:** `C-02`, `C-03`, `C-04` · **Design:** `docs/design/models/finance/mart_revenue_component_bridge.md` `D-01` · **Skill:** `generating-dbt-model` · **Depends on:** Task 2
 
-- [ ] Run `cd transformation && dbt build --select fct_trip+`; expect a successful build of every downstream model and every test under it, including `assert_revenue_walk_balances` now returning no rows.
-- [ ] Run `cd transformation && dbt test --select path:models/marts/finance --exclude test_type:unit` and `cd transformation && dbt test --select path:models/marts/ops --exclude test_type:unit`; expect both to pass.
-- [ ] Confirm `C-01`, `C-02` and `C-04` with probes against the sandbox, independent of the tests: the billable residual totals `−32,638.75` at the cent; the walk's nine lines total `2,629,185.82` at the cent and equal `SUM(total_amount)` over billable in-window trips; `unbalanced_total_count` totals `26,457` across the scorecard's groups. Record each figure.
-- [ ] Commit and push any file this task touched (the sandbox build alone changes nothing in the repository).
+- [x] Run `cd transformation && dbt build --select fct_trip+`; expect a successful build of every downstream model and every test under it, including `assert_revenue_walk_balances` now returning no rows.
+- [x] Run `cd transformation && dbt test --select path:models/marts/finance --exclude test_type:unit` and `cd transformation && dbt test --select path:models/marts/ops --exclude test_type:unit`; expect both to pass.
+- [x] Confirm `C-01`, `C-02` and `C-04` with probes against the sandbox, independent of the tests: the billable residual totals `−32,638.75` at the cent; the walk's nine lines total `2,629,185.82` at the cent and equal `SUM(total_amount)` over billable in-window trips; `unbalanced_total_count` totals `26,457` across the scorecard's groups. Record each figure.
+- [x] Commit and push any file this task touched (the sandbox build alone changes nothing in the repository).
 
 ### Task 4: the contract version and the project gates
 
@@ -98,3 +98,9 @@
 - Task 2: acceptance `C-01`, sandbox probe — `select round(sum(fare_residual), 2) as billable_residual, count(*) filter (where abs(fare_residual - (total_amount - coalesce(fare_amount,0) - coalesce(tip_amount,0) - coalesce(tolls_amount,0) - coalesce(extra,0) - coalesce(mta_tax,0) - coalesce(improvement_surcharge,0) - coalesce(congestion_surcharge,0) - coalesce(airport_fee,0))) > 0.01) as residuals_off_definition, count(*) as billable_trips, round(sum(coalesce(airport_fee,0)), 2) as airport_fee from core.fct_trip where is_billable and pickup_datetime >= timestamp '2024-01-01' and pickup_datetime < timestamp '2024-04-01'` → `-32638.75 | 0 | 95958 | 12262.25`
 - Task 2: `transformation/macros/finance.sql` — sha256:ab3fed5755d46401f92a0247875b6b3ea3edd72fc49870a3f665b732b67ab617
 - Task 2: `transformation/models/docs.md` — sha256:1b6394586f767cf65ed60c3dad4ed8a885e9471382178d80ae7b0a1c6fa2a8ba
+- Task 3: `cd transformation && dbt build --select fct_trip+ --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` — exit 0, `PASS=36 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=37`; `target/run_results.json` records `test.nyc_taxi_analytics.assert_revenue_walk_balances pass 0` and `model.nyc_taxi_analytics.mart_revenue_component_bridge success`
+- Task 3: `python /data/default-plugins/vibedata-data-engineering/0.148.26/scripts/assert_dbt_destination.py` — exit 0 — `DESTINATION_OK: 10 built relation(s) landed in the sandbox`
+- Task 3: `python /data/default-plugins/vibedata-data-engineering/0.148.26/scripts/ephemeral_workspace_marker.py init` — exit 0 — `{"status": "exists"}`
+- Task 3: `cd transformation && dbt test --select path:models/marts/finance --exclude test_type:unit` — exit 0, `PASS=8 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=9`
+- Task 3: `cd transformation && dbt test --select path:models/marts/ops --exclude test_type:unit` — exit 0, `PASS=7 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=8`
+- Task 3: acceptance `C-01`, `C-02`, `C-04`, sandbox probe — `select (select round(sum(component_amount), 2) from finance.mart_revenue_component_bridge) as walk_total, (select round(sum(total_amount), 2) from core.fct_trip where is_billable and pickup_datetime >= timestamp '2024-01-01' and pickup_datetime < timestamp '2024-04-01') as billable_revenue, (select count(*) from (select trip_month, service_type_key, borough_name from finance.mart_revenue_component_bridge group by 1,2,3 having abs(sum(component_amount) - max(total_amount)) > 0.01)) as groups_unbalanced, (select round(sum(component_amount), 2) from finance.mart_revenue_component_bridge where component_name = 'c_residual') as walk_residual, (select sum(unbalanced_total_count) from ops.mart_trip_quality_scorecard) as unbalanced_total_count` → `2629185.82 | 2629185.82 | 0 | -32638.75 | 26457`
