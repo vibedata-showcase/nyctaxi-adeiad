@@ -50,6 +50,8 @@
 | ship contract validation | `cd transformation && dbt build --select agg_borough_flow_matrix --target dev` | 0 | pass — `PASS=18 WARN=0 ERROR=0`; no `contract violation` |
 | ship contract destination | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/assert_dbt_destination.py` | 0 | pass — `DESTINATION_OK: 1 built relation(s)` |
 | domain sweep | inspection of `CONTEXT.md` and `docs/adr/` | 0 | `domain sweep: nothing new` — **Cross-borough trip** and **EWR** were already added with the Requirement, and ADR 0018 already records the population decisions |
+| ship currency (after approval) | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/ship_currency.py --rows .agents_tmp/ship-currency-rows.json` | 0 | pass — `{"fresh": true, "stale": [], "exempt_commits": [65753c3, e213fb9]}`, the approval and gate commits correctly exempt |
+| ship publication | `gh pr create --head intent/ss-borough-flow-b2fa6d9e --base main …` then `gh pr list --head intent/ss-borough-flow-b2fa6d9e --state open --json number,url,baseRefName` | 0 | pass — https://github.com/vibedata-showcase/nyctaxi-adeiad/pull/4 open, number 4, `baseRefName: main` |
 
 ## Weakening
 
