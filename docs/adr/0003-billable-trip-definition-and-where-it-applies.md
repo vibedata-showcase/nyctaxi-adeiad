@@ -27,4 +27,5 @@ This supersedes ADR 0002, which said every gold mart applies the rule. The model
 - [`models/core/fct_trip.md`](../design/models/core/fct_trip.md)
 - [`models/intermediate/int_trip_quality_flags.md`](../design/models/intermediate/int_trip_quality_flags.md)
 - [`models/finance/mart_daily_zone_revenue.md`](../design/models/finance/mart_daily_zone_revenue.md)
+- [`models/finance/mart_revenue_component_bridge.md`](../design/models/finance/mart_revenue_component_bridge.md)
 - [`models/agg/agg_od_flow_matrix.md`](../design/models/agg/agg_od_flow_matrix.md)

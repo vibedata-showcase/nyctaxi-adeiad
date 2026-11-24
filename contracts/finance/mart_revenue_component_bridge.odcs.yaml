@@ -2,7 +2,7 @@ apiVersion: v3.2.0
 kind: DataContract
 id: 0012cefa-b0a4-5942-9979-aebde62d1457
 name: mart_revenue_component_bridge
-version: 1.0.1
+version: 1.0.2
 status: active
 servers:
   - server: sample-nyctaxi-comp
@@ -11,7 +11,7 @@ servers:
     schema: finance
 schema:
   - name: mart_revenue_component_bridge
-    dataGranularityDescription: 'The fare-to-total walk, unpivoted one component per row. The residual is its own component rather than being absorbed into a real one: if it is non-zero the walk does not balance, and that is a finding about the source.'
+    dataGranularityDescription: 'The fare-to-total walk, unpivoted one component per row. The residual is its own component rather than being absorbed into a real one, so the components sum to the group''s total_amount; a non-zero residual means the total is not the sum of its modelled parts, and that is a finding about the source.'
     properties:
       - name: component_name
         description: "Fare component the row carries: c_fare, c_tip, c_tolls, c_extra, c_mta_tax, c_improvement, c_congestion, c_airport_fee, or c_residual, the part of total_amount no other component explains."

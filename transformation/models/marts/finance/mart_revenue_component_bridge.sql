@@ -2,8 +2,9 @@
 -- is auditable line by line.
 --
 -- The residual is carried as its own component rather than being absorbed into
--- one of the real ones. If it is non-zero the walk does not balance, and that
--- is a finding about the source, not a rounding difference to bury.
+-- one of the real ones, so the components sum to the group's total_amount. A
+-- non-zero residual means the total is not the sum of its modelled parts, and
+-- that is a finding about the source, not a rounding difference to bury.
 with base as (
     select
         date_trunc('month', f.pickup_datetime) as trip_month,
