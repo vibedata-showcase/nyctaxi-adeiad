@@ -1,6 +1,7 @@
 ---
-status: decided
+status: rejected
 date: 2026-10-14
+rejected-note: Superseded by docs/adr/0019-every-published-rate-is-a-ratio-of-summed-numerators-and-denominators.md
 ---
 
 # A rate is rebuilt from summed numerators and denominators, and a zero denominator gives null
