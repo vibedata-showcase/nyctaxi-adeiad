@@ -46,6 +46,11 @@ No golden baseline is configured for this relation, so every row above stands on
 | ADR numbering | `python3 .github/scripts/adr_lint.py` | 0 | pass — no duplicates, no dangling citations |
 | Baseline cross-check | not run | - | not applicable: the duckdb_local dbt card's `## Defer` says no production manifest is published, so `/data/cache` holds none and no `state:modified` comparison exists |
 | Governance | not run | - | not applicable: DuckDB has no row filters, masks or access policies |
+| Contract promotion build | `cd transformation && dbt build --select agg_borough_flow_monthly --exclude test_type:unit` | 0 | pass — PASS=11 WARN=1 ERROR=0; no contract violation |
+| Sandbox destination (after contract build) | `assert_dbt_destination.py` | 0 | pass — `DESTINATION_OK`, sandbox `ephm_nyc-taxi-analytics_ss-borough-flow-2d20e29e` |
+| Manifest contract diff | `diff_manifest_contract.py .agents_tmp/base-manifest.json transformation/target/manifest.json` | 0 | pass — `weaker: []`; the single `stronger` entry is the new enforced contract on the new model, which adds a guarantee and removes nothing, so no breaking-contract stop applies |
+| Ship currency | `ship_currency.py --rows .agents_tmp/ship-currency-rows.json` | 0 | pass — `{"fresh": true, "stale": []}` against `origin/main` |
+| Domain sweep | `grep` of `CONTEXT.md` for every term the design record adds | 0 | domain sweep: nothing new — `Borough flow` and `Cross-borough share` were added at design, ADR 0018/0019/0020 are recorded |
 
 **Scope check.** The intent touched only the Plan's rows: the new model and its properties, three singular tests, the Ossie document and its regenerated tests, the contract, `test-map.json`, the design record, three ADRs (two new, one corrected) and link-only additions to six existing ADRs' `## Affected designs`. No published model, macro, seed, project config or profile changed. Nothing in `core`, `finance`, `ops`, `intermediate`, `staging` or `macros` differs from the merge base, so no published promise moved and no consumer was affected.
 
