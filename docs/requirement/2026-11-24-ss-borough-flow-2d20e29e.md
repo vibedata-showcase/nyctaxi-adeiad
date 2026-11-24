@@ -47,3 +47,4 @@ The consumer is Mobility Planning, answering a city request; the answer is a bor
 None.
 
 ## Approvals
+- 2026-11-24T15:18:45Z — requirement approved — "approve_stop" — 56cb6b7
