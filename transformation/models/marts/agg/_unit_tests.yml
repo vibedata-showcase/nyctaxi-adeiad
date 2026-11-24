@@ -1,0 +1,185 @@
+version: 2
+
+unit_tests:
+  # --- agg_borough_flow_matrix: the three flow classes -----------------------
+  - name: borough_flow_classifies_the_three_flow_classes
+    description: >
+      A trip between two different city boroughs is cross_borough, the same
+      city borough on both sides is in_borough, and a trip to a zone TLC
+      cannot place in a borough is unresolved rather than cross-borough.
+    model: agg_borough_flow_matrix
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-15', month_start_date: '2024-01-01'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: mn, borough_name: Manhattan, is_nyc: true, is_unresolved_zone: false}
+          - {zone_key: bk, borough_name: Brooklyn, is_nyc: true, is_unresolved_zone: false}
+          - {zone_key: xx, borough_name: Unknown, is_nyc: false, is_unresolved_zone: true}
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_datetime: '2024-01-10 09:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: bk, is_billable: true, total_amount: 20.0}
+          - {pickup_datetime: '2024-01-10 10:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: mn, is_billable: true, total_amount: 10.0}
+          - {pickup_datetime: '2024-01-10 11:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: xx, is_billable: true, total_amount: 5.0}
+    expect:
+      rows:
+        - {origin_borough: Manhattan, destination_borough: Manhattan, flow_class: in_borough, trip_count: 1, revenue: 10.0}
+        - {origin_borough: Manhattan, destination_borough: Brooklyn, flow_class: cross_borough, trip_count: 1, revenue: 20.0}
+        - {origin_borough: Manhattan, destination_borough: unresolved, flow_class: unresolved, trip_count: 1, revenue: 5.0}
+        - {origin_borough: Brooklyn, destination_borough: Manhattan, flow_class: cross_borough, trip_count: 0, revenue: 0.0}
+        - {origin_borough: Brooklyn, destination_borough: Brooklyn, flow_class: in_borough, trip_count: 0, revenue: 0.0}
+        - {origin_borough: Brooklyn, destination_borough: unresolved, flow_class: unresolved, trip_count: 0, revenue: 0.0}
+        - {origin_borough: unresolved, destination_borough: Manhattan, flow_class: unresolved, trip_count: 0, revenue: 0.0}
+        - {origin_borough: unresolved, destination_borough: Brooklyn, flow_class: unresolved, trip_count: 0, revenue: 0.0}
+        - {origin_borough: unresolved, destination_borough: unresolved, flow_class: unresolved, trip_count: 0, revenue: 0.0}
+
+  # --- A pair with no trips keeps its row ----------------------------------
+  - name: borough_flow_keeps_a_pair_with_no_trips_at_zero
+    description: >
+      The spine publishes every combination, so a pair that carried no trip
+      appears with trip_count 0 and revenue 0 rather than being absent.
+    model: agg_borough_flow_matrix
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-15', month_start_date: '2024-01-01'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: mn, borough_name: Manhattan, is_nyc: true, is_unresolved_zone: false}
+          - {zone_key: bk, borough_name: Brooklyn, is_nyc: true, is_unresolved_zone: false}
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_datetime: '2024-01-10 09:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: bk, is_billable: true, total_amount: 20.0}
+    expect:
+      rows:
+        - {origin_borough: Manhattan, destination_borough: Manhattan, flow_class: in_borough, trip_count: 0, revenue: 0.0}
+        - {origin_borough: Manhattan, destination_borough: Brooklyn, flow_class: cross_borough, trip_count: 1, revenue: 20.0}
+        - {origin_borough: Brooklyn, destination_borough: Manhattan, flow_class: cross_borough, trip_count: 0, revenue: 0.0}
+        - {origin_borough: Brooklyn, destination_borough: Brooklyn, flow_class: in_borough, trip_count: 0, revenue: 0.0}
+
+  # --- EWR is no city borough ----------------------------------------------
+  - name: borough_flow_excludes_ewr_on_either_side
+    description: >
+      EWR is a borough value for a place outside the city. A trip from it or to
+      it is not published at all, on either side.
+    model: agg_borough_flow_matrix
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-15', month_start_date: '2024-01-01'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: mn, borough_name: Manhattan, is_nyc: true, is_unresolved_zone: false}
+          - {zone_key: bk, borough_name: Brooklyn, is_nyc: true, is_unresolved_zone: false}
+          - {zone_key: ewr, borough_name: EWR, is_nyc: false, is_unresolved_zone: false}
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_datetime: '2024-01-10 09:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: ewr, is_billable: true, total_amount: 60.0}
+          - {pickup_datetime: '2024-01-10 10:00:00', pickup_date: '2024-01-10', pickup_zone_key: ewr, dropoff_zone_key: mn, is_billable: true, total_amount: 60.0}
+          - {pickup_datetime: '2024-01-10 11:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: bk, is_billable: true, total_amount: 20.0}
+    expect:
+      rows:
+        - {origin_borough: Manhattan, destination_borough: Manhattan, flow_class: in_borough, trip_count: 0, revenue: 0.0}
+        - {origin_borough: Manhattan, destination_borough: Brooklyn, flow_class: cross_borough, trip_count: 1, revenue: 20.0}
+        - {origin_borough: Brooklyn, destination_borough: Manhattan, flow_class: cross_borough, trip_count: 0, revenue: 0.0}
+        - {origin_borough: Brooklyn, destination_borough: Brooklyn, flow_class: in_borough, trip_count: 0, revenue: 0.0}
+
+  # --- One unresolved member, not one per zone label -----------------------
+  - name: borough_flow_groups_both_unresolved_zones_into_one_member
+    description: >
+      The zone lookup holds two zones TLC cannot place in a borough, labelled
+      Unknown and N/A. They are one unresolved member on each side, so their
+      trips add up in one row rather than splitting across two.
+    model: agg_borough_flow_matrix
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-15', month_start_date: '2024-01-01'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: mn, borough_name: Manhattan, is_nyc: true, is_unresolved_zone: false}
+          - {zone_key: unk, borough_name: Unknown, is_nyc: false, is_unresolved_zone: true}
+          - {zone_key: na, borough_name: N/A, is_nyc: false, is_unresolved_zone: true}
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_datetime: '2024-01-10 09:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: unk, is_billable: true, total_amount: 7.0}
+          - {pickup_datetime: '2024-01-10 10:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: na, is_billable: true, total_amount: 9.0}
+          - {pickup_datetime: '2024-01-10 11:00:00', pickup_date: '2024-01-10', pickup_zone_key: unk, dropoff_zone_key: mn, is_billable: true, total_amount: 4.0}
+          - {pickup_datetime: '2024-01-10 12:00:00', pickup_date: '2024-01-10', pickup_zone_key: na, dropoff_zone_key: na, is_billable: true, total_amount: 3.0}
+    expect:
+      rows:
+        - {origin_borough: Manhattan, destination_borough: Manhattan, trip_count: 0, revenue: 0.0}
+        - {origin_borough: Manhattan, destination_borough: unresolved, trip_count: 2, revenue: 16.0}
+        - {origin_borough: unresolved, destination_borough: Manhattan, trip_count: 1, revenue: 4.0}
+        - {origin_borough: unresolved, destination_borough: unresolved, trip_count: 1, revenue: 3.0}
+
+  # --- The unresolved origin carries no share ------------------------------
+  - name: borough_flow_share_is_null_for_the_unresolved_origin
+    description: >
+      A trip starting in a zone TLC cannot place leaves no borough to measure
+      against, so the unresolved origin's three share columns are null even
+      though its trip_count is not. A city borough that sent trips keeps a
+      share; one that sent none carries counts of 0 and a null share.
+    model: agg_borough_flow_matrix
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-15', month_start_date: '2024-01-01'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: mn, borough_name: Manhattan, is_nyc: true, is_unresolved_zone: false}
+          - {zone_key: bk, borough_name: Brooklyn, is_nyc: true, is_unresolved_zone: false}
+          - {zone_key: unk, borough_name: Unknown, is_nyc: false, is_unresolved_zone: true}
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_datetime: '2024-01-10 09:00:00', pickup_date: '2024-01-10', pickup_zone_key: unk, dropoff_zone_key: mn, is_billable: true, total_amount: 4.0}
+          - {pickup_datetime: '2024-01-10 10:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: bk, is_billable: true, total_amount: 20.0}
+    expect:
+      rows:
+        - {origin_borough: Manhattan, destination_borough: Manhattan, trip_count: 0, origin_cross_borough_trips: 1, origin_trips_to_known_destination: 1, cross_borough_share: 1.0}
+        - {origin_borough: Manhattan, destination_borough: Brooklyn, trip_count: 1, origin_cross_borough_trips: 1, origin_trips_to_known_destination: 1, cross_borough_share: 1.0}
+        - {origin_borough: Manhattan, destination_borough: unresolved, trip_count: 0, origin_cross_borough_trips: 1, origin_trips_to_known_destination: 1, cross_borough_share: 1.0}
+        - {origin_borough: Brooklyn, destination_borough: Manhattan, trip_count: 0, origin_cross_borough_trips: 0, origin_trips_to_known_destination: 0, cross_borough_share: null}
+        - {origin_borough: Brooklyn, destination_borough: Brooklyn, trip_count: 0, origin_cross_borough_trips: 0, origin_trips_to_known_destination: 0, cross_borough_share: null}
+        - {origin_borough: Brooklyn, destination_borough: unresolved, trip_count: 0, origin_cross_borough_trips: 0, origin_trips_to_known_destination: 0, cross_borough_share: null}
+        - {origin_borough: unresolved, destination_borough: Manhattan, trip_count: 1, origin_cross_borough_trips: null, origin_trips_to_known_destination: null, cross_borough_share: null}
+        - {origin_borough: unresolved, destination_borough: Brooklyn, trip_count: 0, origin_cross_borough_trips: null, origin_trips_to_known_destination: null, cross_borough_share: null}
+        - {origin_borough: unresolved, destination_borough: unresolved, trip_count: 0, origin_cross_borough_trips: null, origin_trips_to_known_destination: null, cross_borough_share: null}
+
+  # --- The share leaves unresolved destinations out of both terms ----------
+  - name: borough_flow_share_ignores_unresolved_destinations
+    description: >
+      A trip to an unresolved destination is in the row it belongs to and in
+      the totals, but in neither term of its origin's share: it is not counted
+      as leaving, and it is not in the denominator. Here Manhattan sent three
+      cross-borough trips, one in-borough trip and one to an unresolved zone,
+      so its share is 3/4 rather than 3/5 or 4/5.
+    model: agg_borough_flow_matrix
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-15', month_start_date: '2024-01-01'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: mn, borough_name: Manhattan, is_nyc: true, is_unresolved_zone: false}
+          - {zone_key: bk, borough_name: Brooklyn, is_nyc: true, is_unresolved_zone: false}
+          - {zone_key: unk, borough_name: Unknown, is_nyc: false, is_unresolved_zone: true}
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_datetime: '2024-01-10 09:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: bk, is_billable: true, total_amount: 20.0}
+          - {pickup_datetime: '2024-01-10 10:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: bk, is_billable: true, total_amount: 20.0}
+          - {pickup_datetime: '2024-01-10 11:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: bk, is_billable: true, total_amount: 20.0}
+          - {pickup_datetime: '2024-01-10 12:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: mn, is_billable: true, total_amount: 10.0}
+          - {pickup_datetime: '2024-01-10 13:00:00', pickup_date: '2024-01-10', pickup_zone_key: mn, dropoff_zone_key: unk, is_billable: true, total_amount: 5.0}
+    expect:
+      rows:
+        - {origin_borough: Manhattan, destination_borough: Brooklyn, flow_class: cross_borough, trip_count: 3, revenue: 60.0, origin_cross_borough_trips: 3, origin_trips_to_known_destination: 4, cross_borough_share: 0.75}
+        - {origin_borough: Manhattan, destination_borough: Manhattan, flow_class: in_borough, trip_count: 1, revenue: 10.0, origin_cross_borough_trips: 3, origin_trips_to_known_destination: 4, cross_borough_share: 0.75}
+        - {origin_borough: Manhattan, destination_borough: unresolved, flow_class: unresolved, trip_count: 1, revenue: 5.0, origin_cross_borough_trips: 3, origin_trips_to_known_destination: 4, cross_borough_share: 0.75}
+        - {origin_borough: Brooklyn, destination_borough: Brooklyn, flow_class: in_borough, trip_count: 0, revenue: 0.0, origin_cross_borough_trips: 0, origin_trips_to_known_destination: 0, cross_borough_share: null}
+        - {origin_borough: Brooklyn, destination_borough: Manhattan, flow_class: cross_borough, trip_count: 0, revenue: 0.0, origin_cross_borough_trips: 0, origin_trips_to_known_destination: 0, cross_borough_share: null}
+        - {origin_borough: Brooklyn, destination_borough: unresolved, flow_class: unresolved, trip_count: 0, revenue: 0.0, origin_cross_borough_trips: 0, origin_trips_to_known_destination: 0, cross_borough_share: null}
+        - {origin_borough: unresolved, destination_borough: Brooklyn, flow_class: unresolved, trip_count: 0, revenue: 0.0, origin_cross_borough_trips: null, origin_trips_to_known_destination: null, cross_borough_share: null}
+        - {origin_borough: unresolved, destination_borough: Manhattan, flow_class: unresolved, trip_count: 0, revenue: 0.0, origin_cross_borough_trips: null, origin_trips_to_known_destination: null, cross_borough_share: null}
+        - {origin_borough: unresolved, destination_borough: unresolved, flow_class: unresolved, trip_count: 0, revenue: 0.0, origin_cross_borough_trips: null, origin_trips_to_known_destination: null, cross_borough_share: null}

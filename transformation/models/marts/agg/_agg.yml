@@ -539,3 +539,53 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+  - name: agg_borough_flow_matrix
+    description: >
+      Borough-to-borough flow: how much of the city's traffic crosses a borough
+      line. One row per month, origin borough and destination borough, over the
+      five New York City boroughs plus one unresolved group on each side, with
+      every combination published so a pair that carried no trip keeps its row
+      at zero (ADR 0018). EWR, a borough value for a place outside the city, is
+      left out on both sides, so summing trip_count gives the window's billable
+      trips that touch EWR nowhere -- not the whole network, which is read from
+      fct_trip. Each city borough's share of its trips that left it is carried
+      on every row of its month, beside the two counts it divides, and is a
+      ratio of summed trips rebuilt rather than averaged across pairs (ADR
+      0016); the unresolved origin carries no share, because it is no borough to
+      leave. No quality verdict removes a trip (ADR 0004): the billable rule
+      (ADR 0003) is the only one this population applies.
+    contract: {enforced: true}
+    columns:
+      - name: month_start_date
+        data_type: DATE
+        data_tests: [not_null]
+        description: First day of the calendar month the trips were picked up in, cast to DATE. The month key of dim_date, so the table joins the calendar.
+      - name: origin_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough the trip started in, being one of the five New York City boroughs or the single unresolved group. A zone the TLC cannot place in a borough belongs to the unresolved group, not to a borough of its own (ADR 0012, ADR 0018).
+      - name: destination_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough the trip ended in, over the same members as the origin. The unresolved member means the destination zone cannot be placed in a borough (ADR 0012, ADR 0018).
+      - name: flow_class
+        data_type: VARCHAR
+        data_tests: [not_null, {accepted_values: {arguments: {values: [cross_borough, in_borough, unresolved]}}}]
+        description: 'What the pair is: cross_borough when both sides are New York City boroughs and they differ, in_borough when the same city borough is on both sides, unresolved when either side is the unresolved group. A trip to an unresolved destination is neither in-borough nor cross-borough (ADR 0018).'
+      - name: trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: Billable trips, as the grain of the row names it, picked up inside the reporting window (ADR 0003). Zero when the pair carried none. No minimum applies at this grain (ADR 0018).
+      - name: revenue
+        data_type: DOUBLE
+        data_tests: [not_null]
+        description: Sum of total_amount over the row's billable trips, in USD; zero when the pair carried none.
+      - name: origin_cross_borough_trips
+        data_type: BIGINT
+        description: Cross-borough trips that started in origin_borough in month_start_date, whatever the destination row is. The numerator of cross_borough_share, repeated on every row of its origin and month (ADR 0016).
+      - name: origin_trips_to_known_destination
+        data_type: BIGINT
+        description: Trips that started in origin_borough in month_start_date and ended in a known borough, whatever the destination row is. The denominator of cross_borough_share; it excludes trips to the unresolved group, which leave no borough to measure against (ADR 0016, ADR 0018).
+      - name: cross_borough_share
+        data_type: DOUBLE
+        description: 'origin_cross_borough_trips divided by origin_trips_to_known_destination, as a fraction rather than a percentage: the share of a borough''s trips to a known destination that left it. A ratio of summed trips, rebuilt rather than averaged across pairs (ADR 0016); null, never zero, when the denominator is zero, which is always the case for the unresolved origin.'
