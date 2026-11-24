@@ -1,6 +1,11 @@
 -- Unpivots each trip total into its components so the walk from fare to total
 -- is auditable line by line.
 --
+-- The components are a decomposition of `total_amount`: summed over a group they
+-- equal that group's total. `assert_revenue_walk_decomposes_total` holds that, and
+-- it is why `fare_residual` subtracts every component this unpivot names: one
+-- published here and not subtracted there would be counted twice.
+--
 -- The residual is carried as its own component rather than being absorbed into
 -- one of the real ones. If it is non-zero the walk does not balance, and that
 -- is a finding about the source, not a rounding difference to bury.
