@@ -50,12 +50,12 @@
 
 **Requirements:** `C-01` · **Design:** `code is contract` (the macro), `docs/design/models/core/fct_trip.md` `D-08` · **Skill:** `generating-dbt-model` · **Depends on:** Task 1
 
-- [ ] In `transformation/macros/finance.sql`, subtract `- coalesce({{ alias }}.airport_fee, 0)` in `fare_residual`, after the tolls term and before `total_surcharges`, and extend the macro's comment to say the residual subtracts every component the walk publishes. Do **not** add the fee to `surcharge_columns()`: that macro feeds `total_surcharges`, a separate published column this case does not ask to move.
-- [ ] In `transformation/models/docs.md`, correct the `fare_residual` doc block so its component list names the airport fee and no longer describes the defect.
-- [ ] Run `cd transformation && dbt build --full-refresh --select fct_trip`; expect a successful build of the fact and its tests.
-- [ ] Run `cd transformation && dbt test --select path:models/marts/core --exclude test_type:unit`; expect every core data test to pass.
-- [ ] Re-run `cd transformation && dbt test --select assert_revenue_walk_balances`; expect it still to fail — the bridge table has not been rebuilt yet — and say so rather than treating it as a regression.
-- [ ] Commit and push the macro and the doc block.
+- [x] In `transformation/macros/finance.sql`, subtract `- coalesce({{ alias }}.airport_fee, 0)` in `fare_residual`, after the tolls term and before `total_surcharges`, and extend the macro's comment to say the residual subtracts every component the walk publishes. Do **not** add the fee to `surcharge_columns()`: that macro feeds `total_surcharges`, a separate published column this case does not ask to move.
+- [x] In `transformation/models/docs.md`, correct the `fare_residual` doc block so its component list names the airport fee and no longer describes the defect.
+- [x] Run `cd transformation && dbt build --full-refresh --select +fct_trip`; expect a successful build of the fact and its tests. The selection carries the `+`: the residual reaches the fact through `int_trip_fare_components`, a view, and `--select fct_trip` alone leaves that view holding its pre-fix definition, so the full refresh re-reads the old residual and still exits 0. (Corrected during execution from `--select fct_trip` after the acceptance probe caught it.)
+- [x] Run `cd transformation && dbt test --select path:models/marts/core --exclude test_type:unit`; expect every core data test to pass.
+- [x] Re-run `cd transformation && dbt test --select assert_revenue_walk_balances`; expect it still to fail — the bridge table has not been rebuilt yet — and say so rather than treating it as a regression.
+- [x] Commit and push the macro and the doc block.
 
 ### Task 3: rebuild the consumers and prove the walk balances
 
@@ -88,3 +88,13 @@
 - Task 1: profiling verdict — `finance.mart_revenue_component_bridge` `Ready`, read in the Verification's `## Discovery` (44 groups, 9 out of balance by `12,262.25` pre-fix)
 - Task 1: `transformation/tests/assert_revenue_walk_balances.sql` — sha256:7912a7b2df6bcb0bfbe17bd468ad85b23c5759954172cb3a0d36f33a286f098d
 - Task 1: `test-map.json` — sha256:245dc6ddeed34c16a77b1083cbf494ced29c713d864d228126afe9c5ab66c7e5
+- Task 2: `cd transformation && dbt compile --select int_trip_fare_components --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` — exit 0 — the compiled residual is `coalesce(t.total_amount, 0) - … - coalesce(t.tolls_amount, 0) - coalesce(t.airport_fee, 0) - (coalesce(t.extra, 0) + …)`
+- Task 2: `cd transformation && dbt build --full-refresh --select fct_trip --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` — exit 0, `PASS=16 WARN=0 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=16` — **insufficient gate**: the sandbox probe after it still read `billable_residual = -20376.5`, because `int_trip_fare_components` is a view and `--select fct_trip` does not re-create it
+- Task 2: `cd transformation && dbt build --full-refresh --select +fct_trip --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` — exit 0, `PASS=99 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=100` — the warning is the pre-existing `assert_semantic_levels_hold` sentinel-borough warning
+- Task 2: `python /data/default-plugins/vibedata-data-engineering/0.148.26/scripts/assert_dbt_destination.py` — exit 0 — `DESTINATION_OK: 22 built relation(s) landed in the sandbox`
+- Task 2: `python /data/default-plugins/vibedata-data-engineering/0.148.26/scripts/ephemeral_workspace_marker.py init` — exit 0 — `{"status": "exists"}`
+- Task 2: `cd transformation && dbt test --select path:models/marts/core --exclude test_type:unit` — exit 0, `PASS=74 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=75`
+- Task 2: `cd transformation && dbt test --select assert_revenue_walk_balances` — exit 0 with `ERROR=1`, `Got 9 results` — expected: the bridge table is still the pre-fix build
+- Task 2: acceptance `C-01`, sandbox probe — `select round(sum(fare_residual), 2) as billable_residual, count(*) filter (where abs(fare_residual - (total_amount - coalesce(fare_amount,0) - coalesce(tip_amount,0) - coalesce(tolls_amount,0) - coalesce(extra,0) - coalesce(mta_tax,0) - coalesce(improvement_surcharge,0) - coalesce(congestion_surcharge,0) - coalesce(airport_fee,0))) > 0.01) as residuals_off_definition, count(*) as billable_trips, round(sum(coalesce(airport_fee,0)), 2) as airport_fee from core.fct_trip where is_billable and pickup_datetime >= timestamp '2024-01-01' and pickup_datetime < timestamp '2024-04-01'` → `-32638.75 | 0 | 95958 | 12262.25`
+- Task 2: `transformation/macros/finance.sql` — sha256:ab3fed5755d46401f92a0247875b6b3ea3edd72fc49870a3f665b732b67ab617
+- Task 2: `transformation/models/docs.md` — sha256:1b6394586f767cf65ed60c3dad4ed8a885e9471382178d80ae7b0a1c6fa2a8ba

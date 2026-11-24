@@ -20,6 +20,11 @@
 {#-
   What the total does not explain. A non-zero residual means either a component
   we do not model, or a total that was not derived from its parts.
+
+  This subtraction and the revenue walk's unpivot are one component list. A
+  component the walk publishes on its own line and this macro leaves out is
+  counted twice, and the walk sums to more than the total; the airport fee did
+  exactly that. Register a new component here, not only in the walk.
 -#}
 {% macro fare_residual(alias='t') -%}
     (
@@ -27,6 +32,7 @@
         - coalesce({{ alias }}.fare_amount, 0)
         - coalesce({{ alias }}.tip_amount, 0)
         - coalesce({{ alias }}.tolls_amount, 0)
+        - coalesce({{ alias }}.airport_fee, 0)
         - {{ total_surcharges(alias) }}
     )
 {%- endmacro %}
