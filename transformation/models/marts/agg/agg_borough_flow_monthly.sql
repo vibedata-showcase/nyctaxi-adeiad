@@ -68,7 +68,8 @@ select
     cast(o.is_unresolved as boolean) as origin_is_unresolved,
     cast(d.borough_name as varchar) as dest_borough,
     cast(d.is_unresolved as boolean) as dest_is_unresolved,
-    cast(not o.is_unresolved and not d.is_unresolved and o.borough_name != d.borough_name as boolean
+    cast(
+        not o.is_unresolved and not d.is_unresolved and o.borough_name != d.borough_name as boolean
     ) as is_cross_borough,
     cast(coalesce(p.trip_count, 0) as bigint) as trip_count,
     cast(coalesce(p.total_revenue, 0) as double) as total_revenue,
@@ -84,9 +85,11 @@ from months m
 cross join boroughs o
 cross join boroughs d
 left join pair_trips p
-    on p.month_start_date = m.month_start_date
+    on
+        p.month_start_date = m.month_start_date
         and p.origin_borough = o.borough_name
         and p.dest_borough = d.borough_name
 left join origin_month om
-    on om.month_start_date = m.month_start_date
+    on
+        om.month_start_date = m.month_start_date
         and om.origin_borough = o.borough_name
