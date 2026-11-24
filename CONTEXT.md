@@ -78,10 +78,10 @@ An origin-destination pair with at least 25 billable trips in the reporting wind
 _Not_: a borough flow, because the floor is a zone-pair rule and borough pairs carry none (ADR 0018).
 
 **Borough flow**:
-The billable trips from one borough to another, published for every borough pair in each month and without a trip floor (ADR 0018). Coarser than an origin-destination flow, and its monthly totals equal the billable population.
+The billable trips from one borough to another, published for every pair of borough groups in each month — the boroughs, with unresolved zones forming one group of their own — and without a trip floor (ADR 0018). Coarser than an origin-destination flow, and its monthly totals equal the billable population.
 
 **Leaving-borough share**:
-The share of a borough's billable pickups whose dropoff is in another borough. It is measured against all billable pickups in the origin borough, so every destination counts, including one on a pair the zone-level floor would not publish.
+The share of a borough's billable pickups that end in another borough. It is measured against the borough's billable pickups that end in a borough, so a trip into an unresolved zone counts in the totals but not in the share.
 
 **Medallion**:
 The licence to operate a taxi. It is transferable: the licence outlives the vehicle it currently covers and the driver who currently holds it, so it is neither of them.
