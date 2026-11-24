@@ -58,6 +58,15 @@
 | Weakening: enforced contracts | `python3 scripts/diff_manifest_contract.py <manifest at 1184020> <manifest at d13c51e>` | 0 | pass — `weaker: []`, `stronger: []` |
 | Weakening: dlt schema contracts | not run | - | not required: the intent changed no pipeline under `ingestion/` |
 | Docs publication | `cd transformation && dbt docs generate --static --target dev` | 0 | pass — catalog written, 87 relations |
+| Ship: touched-model build (contract validation) | `cd transformation && dbt build --target dev --select mart_revenue_component_bridge fct_trip` | 0 | pass — `PASS=19 WARN=0 ERROR=0` |
+| Ship: destination of that build | `python3 /data/default-plugins/vibedata-data-engineering/0.148.26/scripts/assert_dbt_destination.py` | 0 | pass — `DESTINATION_OK: 2 built relation(s) landed in the sandbox` |
+| Ship: enforced-contract promotion check | `awk`/`grep` over `_finance.yml` and `_core.yml` at `1184020` and at `b125b3c` | 0 | not applicable — neither touched model sets `access:` (so neither is public), and both already carry `contract: {enforced: true}` in base and head, so nothing is promoted; the manifest diff above stands as the breaking-ness evidence |
+| Ship: description check (fix playbook `## Ship`) | python check that `_finance.yml`, the contract and the model header all carry "components sum to the group's total_amount" and none carries the stale "non-zero the walk does not balance" | 0 | pass — 3 descriptions checked, 0 failures |
+| Ship: currency | `python3 /data/default-plugins/vibedata-data-engineering/0.148.26/scripts/ship_currency.py --rows .agents_tmp/ship-currency-rows.json` | 0 | pass — `{"fresh": true, "stale": [], "exempt_commits": []}`; target `origin/main` at `1184020` |
+| Domain sweep | terms and decisions of this intent against `CONTEXT.md` and `docs/adr/` | 0 | `domain sweep: nothing new` — the intent introduced no term (`fare component`, `fare residual`, `the fare-to-total walk` and the airport fee all predate it) and its standing rule is already `CONTEXT.md`'s **Fare residual**; the decisions live in the two design records |
+| Ship: push | `git push -u origin HEAD` | 0 | `Everything up-to-date` / `branch 'intent/r9-revenue-walk-fix-ca72c1e0' set up to track 'origin/intent/r9-revenue-walk-fix-ca72c1e0'` |
+| Ship: local git hooks | `python3 /data/default-plugins/vibedata-data-engineering/0.148.26/scripts/ci_install_state.py check-hooks --target .` | 6 | notice — the CI bundle's hooks are not installed in this workspace (`.git/hooks/pre-commit`, `.git/hooks/pre-push`), so this push ran without the local secret scan and lint and `ci/static-check` is the only SQLFluff check; `/install-ci` installs them |
+| Ship: Domain CI installed | `ls .workflow/ci-config.yml .github/workflows/ci.yml` | 0 | pass — both present, so no CI notice |
 
 ## Discovery
 
