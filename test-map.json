@@ -81,17 +81,29 @@
       "sources": [
         "transformation/models/marts/agg/"
       ],
+      "unit": [
+        "transformation/models/marts/agg/_unit_tests.yml"
+      ],
       "data": [
         "transformation/tests/assert_daypart_cube_one_row_per_grain.sql",
         "transformation/tests/assert_compound_rates_equal_their_ratio.sql",
         "transformation/tests/assert_aggs_cover_every_trip.sql",
-        "transformation/tests/assert_od_flow_floor.sql"
+        "transformation/tests/assert_od_flow_floor.sql",
+        "transformation/tests/assert_borough_flow_grain_is_unique.sql",
+        "transformation/tests/assert_borough_flow_grid_is_complete.sql",
+        "transformation/tests/assert_borough_flow_cells_match_fct_trip.sql",
+        "transformation/tests/assert_borough_flow_reconciles_to_fct_trip.sql",
+        "transformation/tests/assert_borough_flow_share_matches_its_counts.sql",
+        "transformation/tests/assert_borough_flow_unresolved_cells_carry_no_share.sql",
+        "transformation/tests/assert_borough_flow_flags_match_dim_zone.sql"
       ],
       "selectors": {
-        "data": "path:models/marts/agg"
+        "data": "path:models/marts/agg",
+        "unit": "path:models/marts/agg"
       },
       "commands": {
-        "data": "cd transformation && dbt test --select path:models/marts/agg --exclude test_type:unit"
+        "data": "cd transformation && dbt test --select path:models/marts/agg --exclude test_type:unit",
+        "unit": "cd transformation && dbt test --select path:models/marts/agg,test_type:unit"
       }
     },
     "finance": {

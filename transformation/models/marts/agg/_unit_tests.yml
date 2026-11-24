@@ -1,0 +1,43 @@
+version: 2
+
+unit_tests:
+  # --- agg_borough_flow_monthly: grid spine, zero cells, nulled share ---------
+  - name: borough_flow_keeps_zero_cells_and_blanks_the_share_on_an_unresolved_end
+    description: >
+      The complete grid is published: every borough crossed with every borough,
+      the pair-months with no billable trip at zero. A resolved pair carries its
+      trips and the origin's share, and a pair that ends in an unresolved zone
+      keeps its trips while blanking the share (ADR 0018, ADR 0019). Manhattan's
+      own cell is a zero cell that still carries its origin's share, because the
+      share is an origin-month value repeated across that origin's rows
+      (design D-05).
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {date_key: 20240101, calendar_date: '2024-01-01', month_start_date: '2024-01-01', month_name: January, calendar_year: 2024}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: z-manhattan, borough_name: Manhattan, is_unresolved_zone: false}
+          - {zone_key: z-brooklyn, borough_name: Brooklyn, is_unresolved_zone: false}
+          - {zone_key: z-unknown, borough_name: Unknown, is_unresolved_zone: true}
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: t1, pickup_zone_key: z-manhattan, dropoff_zone_key: z-brooklyn, pickup_datetime: '2024-01-10 09:00:00', total_amount: 20.0, is_billable: true}
+          - {trip_key: t2, pickup_zone_key: z-manhattan, dropoff_zone_key: z-unknown, pickup_datetime: '2024-01-10 10:00:00', total_amount: 10.0, is_billable: true}
+          - {trip_key: t3, pickup_zone_key: z-manhattan, dropoff_zone_key: z-brooklyn, pickup_datetime: '2024-01-10 11:00:00', total_amount: 15.0, is_billable: false}
+    expect:
+      rows:
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, trip_count: 0, total_revenue: 0.0, cross_borough_share_pct: 100.0}
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, dest_borough: Brooklyn, trip_count: 1, total_revenue: 20.0, cross_borough_share_pct: 100.0}
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, dest_borough: Unknown, trip_count: 1, total_revenue: 10.0, cross_borough_share_pct: null}
+        - {month_start_date: '2024-01-01', origin_borough: Brooklyn, dest_borough: Manhattan, trip_count: 0, total_revenue: 0.0, cross_borough_share_pct: null}
+        - {month_start_date: '2024-01-01', origin_borough: Brooklyn, dest_borough: Brooklyn, trip_count: 0, total_revenue: 0.0, cross_borough_share_pct: null}
+        - {month_start_date: '2024-01-01', origin_borough: Brooklyn, dest_borough: Unknown, trip_count: 0, total_revenue: 0.0, cross_borough_share_pct: null}
+        - {month_start_date: '2024-01-01', origin_borough: Unknown, dest_borough: Manhattan, trip_count: 0, total_revenue: 0.0, cross_borough_share_pct: null}
+        - {month_start_date: '2024-01-01', origin_borough: Unknown, dest_borough: Brooklyn, trip_count: 0, total_revenue: 0.0, cross_borough_share_pct: null}
+        - {month_start_date: '2024-01-01', origin_borough: Unknown, dest_borough: Unknown, trip_count: 0, total_revenue: 0.0, cross_borough_share_pct: null}
