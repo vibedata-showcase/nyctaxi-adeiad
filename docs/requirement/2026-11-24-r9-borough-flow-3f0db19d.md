@@ -54,3 +54,4 @@ None.
 ## Approvals
 - 2026-11-24T10:18:21Z — requirement approved — "Approve and stop here" — 1d8bcd0
 - 2026-11-24T10:28:19Z — design approved — "Approve and continue to the Plan" — 1ca1f72
+- 2026-11-24T10:52:26Z — design approved — "month_only" — e2384e3
