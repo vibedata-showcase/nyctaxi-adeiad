@@ -70,12 +70,12 @@
 
 **Requirements:** `C-05` · **Design:** `docs/design/models/core/fct_trip.md` `D-08` · **Skill:** `data-contract` · **Depends on:** Task 3
 
-- [ ] In `contracts/core/fct_trip.odcs.yaml`, move `version` from `1.1.0` to `2.0.0`. Change no property: `fare_residual` keeps its name, `logicalType: number` and `physicalType: DOUBLE`. The major bump is the signal that a consumer's stored values are stale, not a shape change.
-- [ ] Run `python3 .agents/skills/data-contract/scripts/odcs.py generate`, then `python3 .agents/skills/data-contract/scripts/odcs.py check`; expect exit 0.
-- [ ] Run `python3 .agents/skills/data-contract/scripts/odcs.py diff origin/main`; expect exit 0 and no `diff/version-not-bumped`.
-- [ ] Run `python3 .agents/skills/data-contract/scripts/odcs.py check --relations`; expect exit 0, or record the exact refusal code if it cannot read the built relations.
-- [ ] Run the repository's pre-push gates: `python3 -m pytest tests -q`, `ruff check .`, `sqlfluff lint transformation/models`, `cd transformation && dbt test --exclude test_type:unit`, `cd transformation && dbt test --select test_type:unit`; expect exit 0 from each, and record each exit code.
-- [ ] Commit and push the contract together with any file `generate` rewrote.
+- [x] In `contracts/core/fct_trip.odcs.yaml`, move `version` from `1.1.0` to `2.0.0`. Change no property: `fare_residual` keeps its name, `logicalType: number` and `physicalType: DOUBLE`. The major bump is the signal that a consumer's stored values are stale, not a shape change.
+- [x] Run `python3 .agents/skills/data-contract/scripts/odcs.py generate`, then `python3 .agents/skills/data-contract/scripts/odcs.py check`; expect exit 0.
+- [x] Run `python3 .agents/skills/data-contract/scripts/odcs.py diff origin/main`; expect exit 0 and no `diff/version-not-bumped`.
+- [x] Run `python3 .agents/skills/data-contract/scripts/odcs.py check --relations`; expect exit 0, or record the exact refusal code if it cannot read the built relations.
+- [x] Run the repository's pre-push gates: `python3 -m pytest tests -q`, `ruff check .`, `sqlfluff lint transformation/models`, `cd transformation && dbt test --exclude test_type:unit`, `cd transformation && dbt test --select test_type:unit`; expect exit 0 from each, and record each exit code.
+- [x] Commit and push the contract together with any file `generate` rewrote.
 
 ## Execution evidence
 
@@ -104,3 +104,16 @@
 - Task 3: `cd transformation && dbt test --select path:models/marts/finance --exclude test_type:unit` — exit 0, `PASS=8 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=9`
 - Task 3: `cd transformation && dbt test --select path:models/marts/ops --exclude test_type:unit` — exit 0, `PASS=7 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=8`
 - Task 3: acceptance `C-01`, `C-02`, `C-04`, sandbox probe — `select (select round(sum(component_amount), 2) from finance.mart_revenue_component_bridge) as walk_total, (select round(sum(total_amount), 2) from core.fct_trip where is_billable and pickup_datetime >= timestamp '2024-01-01' and pickup_datetime < timestamp '2024-04-01') as billable_revenue, (select count(*) from (select trip_month, service_type_key, borough_name from finance.mart_revenue_component_bridge group by 1,2,3 having abs(sum(component_amount) - max(total_amount)) > 0.01)) as groups_unbalanced, (select round(sum(component_amount), 2) from finance.mart_revenue_component_bridge where component_name = 'c_residual') as walk_residual, (select sum(unbalanced_total_count) from ops.mart_trip_quality_scorecard) as unbalanced_total_count` → `2629185.82 | 2629185.82 | 0 | -32638.75 | 26457`
+- Task 4: `contracts/core/fct_trip.odcs.yaml` — `version` moved `1.1.0` → `2.0.0`, no property touched; `grep -n version:` reads `5:version: 2.0.0`; sha256:8b216f845effd751668c74c60494e26cffa7d0ea981c7f476fc7c64c5ac4e192
+- Task 4: `python3 .agents/skills/data-contract/scripts/odcs.py generate` — exit 0
+- Task 4: `python3 .agents/skills/data-contract/scripts/odcs.py check` — exit 0 — no `contract/active-unbuilt` for `core.fct_trip` (the two `agg.agg_driver_*` warnings this step surfaced earlier are pre-existing: neither model is built in the sandbox and neither is touched by this change)
+- Task 4: `python3 .agents/skills/data-contract/scripts/odcs.py diff origin/main` — exit 0, no `diff/version-not-bumped`
+- Task 4: `python3 .agents/skills/data-contract/scripts/odcs.py check --relations` — **exit 1**, `catalog/missing`: "relations: no Intent context names a warehouse; pass `--catalog` with the built local database file or dbt's catalog.json" — the gate cannot read the built relations without being handed a catalog
+- Task 4: `cd transformation && dbt docs generate` — exit 0 — `Catalog written to /workspace/transformation/target/catalog.json`
+- Task 4: `python3 .agents/skills/data-contract/scripts/odcs.py check --relations --catalog transformation/target/catalog.json` — exit 1 — `core.fct_trip` is **not** among the findings, so the relation this change touches matches its contract; the 6 errors are `relations/mismatch` on `bronze|mdm_raw|ops_raw.audit_runs` and `.audit_table_loads`, all "the catalog holds no such relation". Pre-existing and outside this change: those six relations are dlt inputs (they exist in the sandbox — `information_schema.tables` lists all 6), and dbt's `catalog.json` only ever covers dbt-built relations. Reported to the user, not fixed here.
+- Task 4: `python3 -m pytest tests -q` — exit 0 — `222 passed in 164.98s`
+- Task 4: `ruff check .` — exit 0 — `All checks passed!`
+- Task 4: `sqlfluff lint transformation/models` — exit 0 — `All Finished!`
+- Task 4: `cd transformation && dbt test --exclude test_type:unit` — exit 0 — `PASS=166 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=167` — the warning is the pre-existing `assert_semantic_levels_hold`
+- Task 4: `cd transformation && dbt test --select test_type:unit` — exit 0 — `PASS=6 WARN=0 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=6`
+
