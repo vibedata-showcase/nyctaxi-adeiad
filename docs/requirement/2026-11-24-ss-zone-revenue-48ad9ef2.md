@@ -66,3 +66,4 @@ None.
 ## Approvals
 
 - 2026-11-24T17:42:54Z — requirement approved — "Approve and stop" — aec0fda
+- 2026-11-24T18:04:24Z — design approved — "Approve and continue to the Plan (then stop where you asked)" — 5cb9b8a
