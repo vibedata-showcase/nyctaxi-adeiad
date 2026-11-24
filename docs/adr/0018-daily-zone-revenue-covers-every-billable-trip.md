@@ -23,3 +23,8 @@ The population is settled by the finance report owner's answer when asked to cho
 - The daily-by-zone build publishes both all-trip and billable measures, and its existing all-trip measures keep their meaning and their values for the readers that use them.
 - A later revenue or flow report reads the single daily-by-zone build instead of recomputing the grouping from the trip fact.
 - The report's figures describe the city's billed trips, not the operator's own revenue; fleet-attributed revenue remains a separate question, answered from the shifts and the operations marts.
+
+## Affected designs
+
+- [`models/agg/agg_trip_zone_daily.md`](../design/models/agg/agg_trip_zone_daily.md)
+- [`models/finance/mart_daily_zone_revenue.md`](../design/models/finance/mart_daily_zone_revenue.md)

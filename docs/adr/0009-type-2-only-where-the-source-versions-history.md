@@ -24,3 +24,4 @@ date: 2026-10-14
 - [`models/core/dim_zone.md`](../design/models/core/dim_zone.md)
 - [`models/core/fct_trip.md`](../design/models/core/fct_trip.md)
 - [`pipelines/mdm.md`](../design/pipelines/mdm.md)
+- [`models/finance/mart_daily_zone_revenue.md`](../design/models/finance/mart_daily_zone_revenue.md)
