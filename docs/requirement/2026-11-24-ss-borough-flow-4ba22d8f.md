@@ -1,6 +1,5 @@
 ---
 kinds: [transformation]
-express: true
 ---
 
 # Requirement: SS · borough flow
@@ -20,7 +19,7 @@ She consumes the result as a table in the warehouse. It is a new boundary relati
 - [ ] `R-03` The months are exactly January, February and March 2024, with no month outside Q1 and no period cut short — accept when the table holds those three `trip_month` values and nothing else, and each month covers its full calendar (Jan 31/31, Feb 29/29, Mar 31/31 days observed) — source: request
 - [ ] `R-04` A borough the TLC does not name is never an origin or a destination: `Unknown` and `N/A` zones report as one `Unresolved` group, and `EWR` stays a borough of its own — accept when no row carries `Unknown` or `N/A` in either borough column, exactly one distinct `Unresolved` value exists, and `EWR` appears as an origin and as a destination — source: answer, `docs/adr/0018-only-tlc-named-boroughs-count-and-unresolved-zones-form-one-group.md`
 - [ ] `R-05` Each row's leaving-borough share is the share of the origin borough's resolved trips in that month that end in another named borough: identical on every row of one origin borough and month, the `Unresolved` destination row included, and equal to an independent recomputation — accept when the value matches a recompute from `fct_trip` and `dim_zone` for every origin borough and month (Manhattan 5.5545%, 5.4238%, 5.5979%; Queens 70.5492%, 72.2063%, 73.1730% for Jan–Mar) and is null only where the origin borough has no resolved trip — source: answer
-- [ ] `R-06` Each row also carries the pair's own share of the origin borough's resolved trips that month, and those shares sum to 1 per origin borough and month over the named-borough destinations — accept when the per-origin-month sums are 1 to within 1e-9 and the column is null exactly where the leaving share is null — source: answer
+- [ ] `R-06` Each row also carries the pair's own share of the origin borough's resolved trips that month, null on a row whose destination is `Unresolved`, and those shares sum to 1 per origin borough and month over the named-borough destinations — accept when the per-origin-month sums are 1 to within 1e-9, the column is null exactly on the `Unresolved` destination rows, and the non-null shares recompute from `fct_trip` and `dim_zone` — source: answer
 - [ ] `R-07` A borough pair with no billable trips in a month has no row, and no threshold withholds a pair that has any — accept when the table holds no zero-trip row and 104 rows for Q1 2024 (35 in January, 33 in February, 36 in March) — source: answer
 - [ ] `R-08` Revenue is the canonical billable revenue: the summed total amount of the row's billable trips, with the trip count published beside it — accept when the column matches `sum(total_amount)` over the row's trips, and the count equals the number of trips carrying it — source: `logical-model/nyc_taxi_analytics.ossie.yaml` (`billable_revenue`), `docs/adr/0003-billable-trip-definition-and-where-it-applies.md`
 - [ ] `R-09` The table is published as a boundary relation: an enforced dbt contract, an ODCS contract beside it, and a recorded exclusion from the semantic layer that states the reason, with descriptions that say the leaving share repeats and must not be summed — accept when `dbt` enforces the contract, `odcs.py check` and `ossie_lint.py` pass, the repo map's `semantic_exclusions` names the relation with its reason, and the design record's `## Logical Model` block names the documents actually changed — source: `repo-map.json` (`layers.agg`, `modules.contracts`), `AGENTS.md`; amended by the user's answer at the design stop of 2026-11-24, which chose a recorded exclusion over a canonical-model binding
@@ -34,7 +33,7 @@ She consumes the result as a table in the warehouse. It is a new boundary relati
 | Population | Billable trips only, inside the reporting window, per ADR 0003: "Gold marts that report revenue or flows apply it" | `docs/adr/0003-billable-trip-definition-and-where-it-applies.md` |
 | Borough values | The five TLC-named NYC boroughs plus `EWR`; `Unknown` and `N/A` merge into one `Unresolved` group | answer; `docs/adr/0018-only-tlc-named-boroughs-count-and-unresolved-zones-form-one-group.md` |
 | Leaving-borough share | A crossing is a trip resolved to two different named boroughs at both ends; the share's numerator and denominator both exclude any trip touching `Unresolved`, and the value repeats on every row of that origin borough and month, the `Unresolved` destination row included | answer; `docs/adr/0018-...md` |
-| Per-row share | The pair's trips over the origin borough's trips that month resolved to a named borough at both ends; null on the `Unresolved` destination row; shares sum to 1 per origin borough and month | answer |
+| Per-row share | The pair's trips over the origin borough's trips that month resolved to a named borough at both ends; null on the `Unresolved` destination row, whose trips are outside that denominator; shares sum to 1 per origin borough and month over the named-borough destinations | answer |
 | Minimum pair size | None: every borough pair with billable trips is published. ADR 0017's 25-trip floor is a rule about published zone-pair flows and is not applied here | answer |
 | Periods with no trips | Omitted, never emitted as a zero row | answer |
 | Measure coverage | `trip_count` is published beside `total_revenue`; a billable trip always carries a total, so the count is the coverage | playbook default (`transformation` Coverage) |
@@ -58,3 +57,4 @@ None.
 
 ## Approvals
 - 2026-11-24T16:19:31Z — requirement approved — "Approve, but stop here" — 4e52c16
+- 2026-11-24T16:39:01Z — design approved — "Please write the design records and the Plan. Stop when the Plan is written. Do not start the build yet." — 21e6c93
