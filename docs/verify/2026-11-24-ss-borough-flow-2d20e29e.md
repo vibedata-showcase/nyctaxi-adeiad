@@ -1,6 +1,60 @@
 # Verification: SS · borough flow
 
+## Verification
+
+`verdict: verified` at `7d9e214`: every requirement's acceptance condition was recomputed from `core.fct_trip` and `core.dim_zone` independently of the mart, every gate passed at this commit, and the design record, the two ADRs, the contract and `CONTEXT.md` were checked against the built relation and corrected where they named the pre-rename column.
+
+## Coverage
+
+| Item | Evidence | Result | At |
+| --- | --- | --- | --- |
+| `R-01` grain, month × origin borough × destination borough | `select … group by 1,2,3 having count(*) > 1` — duplicate row count | 0 duplicate rows; 122 rows over 3 months | `7d9e214` |
+| `R-02` trips and revenue per pair | fact-vs-mart recomputation from `fct_trip` without reading the mart's SQL: trips 29,985 / 30,017 / 35,956; revenue 816,057.76 / 813,885.68 / 999,242.38 | trips_match and rev_match true in all three months | `7d9e214` |
+| `R-03` share per origin borough, rebuilt from its parts | share recomputed as numerator / denominator over the mart, plus an independent numerator recomputation from `fct_trip` joined twice to `dim_zone` | 0 numerator mismatches over 18 resolved origin-month groups; Manhattan January 0.0552777, Queens 0.6818668 | `7d9e214` |
+| `R-04` no trip floor | count of published pairs below 25 trips; SQL inspected for `HAVING` | 66 thin rows published (22 / 21 / 23 by month); 0 `HAVING` clauses | `7d9e214` |
+| `R-05` every billable trip counted once; totals reconcile | month sums of `billable_trip_count` and `billable_revenue` against `fct_trip`; `assert_borough_flow_reconciles_to_star` | 95,958 trips and 2,629,185.82 revenue both sides; test passes | `7d9e214` |
+| `R-06` published boundary relation with contract, design record, semantic mapping | `odcs.py check`, `ossie.py validate/coverage/suppliers/notes/generate-tests --check/bindings`, `dbt build --select package:dbt_project_evaluator` | all exit 0; contract `active`; LTS10 mapped; evaluator 0 errors, none naming this model | `7d9e214` |
+| `R-07` unresolved outside the share, inside the totals | rows with `origin_is_unresolved` carrying any numerator, denominator or share; `assert_borough_share_excludes_unresolved` | 0 such rows out of 24; test passes; guard proved able to fail on a synthetic bad row | `7d9e214` |
+| `agg_borough_flow_monthly` model row | `dbt build --select agg_borough_flow_monthly --exclude test_type:unit` | exit 0, PASS=11 WARN=1 ERROR=0 | `7d9e214` |
+| `assert_borough_flow_reconciles_to_star` row | `dbt test --select assert_borough_flow_reconciles_to_star` | exit 0, 0 rows returned | `7d9e214` |
+| `assert_borough_share_equals_its_parts` row | `dbt test --select assert_borough_share_equals_its_parts` | exit 0, 0 rows returned | `7d9e214` |
+| `assert_borough_share_excludes_unresolved` row | `dbt test --select assert_borough_share_excludes_unresolved` | exit 0, 0 rows returned | `7d9e214` |
+| `logical-model` row | ossie structural chain and `bindings` | exit 0 each; bindings 0 findings | `7d9e214` |
+| `contract` row | `odcs.py check`, `odcs.py generate` | exit 0; no stale keys | `7d9e214` |
+| `test-map.json` row | `python3 -m pytest tests/test_maps.py -q` | exit 0, 30 passed | `7d9e214` |
+
+No golden baseline is configured for this relation, so every row above stands on independent recomputation from the star rather than on a stored fixture.
+
+## Gate results
+
+| Gate | Command | Exit | Outcome |
+| --- | --- | --- | --- |
+| Data and unit tests | `cd transformation && dbt build --select agg_borough_flow_monthly --exclude test_type:unit --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass — PASS=11 WARN=1 ERROR=0; the warning is the pre-existing `LTS5_weather_borough_daily` unresolved member |
+| Unit tests | `cd transformation && dbt test --select agg_borough_flow_monthly,test_type:unit` | 0 | pass — PASS=8 WARN=0 |
+| Sandbox destination | `assert_dbt_destination.py` | 0 | pass — `DESTINATION_OK`, sandbox `ephm_nyc-taxi-analytics_ss-borough-flow-2d20e29e` |
+| Project audit | `cd transformation && dbt build --select package:dbt_project_evaluator --vars '{dbt_project_evaluator_enabled: true}'` | 0 | pass — 66 passed, 12 warnings, 0 errors; none names this model |
+| Semantic structural chain | `ossie.py validate` / `coverage` / `suppliers` / `notes` / `generate-tests --check` | 0 each | pass — 0 errors, 0 coverage errors, 0 unsupplied, 0 dangling, 0 stale |
+| Semantic bindings | `ossie.py bindings logical-model/ transformation/target/manifest.json` | 0 | pass — 0 findings |
+| Semantic columns | `ossie.py columns logical-model/ transformation/target/catalog.json` | 0 | pass for this intent — 5 findings, all in `nyc_taxi_fleet.ossie.yaml`, none in the trips document |
+| Semantic tests on data | `dbt test --select assert_semantic_content_holds assert_semantic_level_keys_hold assert_semantic_levels_hold` | 0 | pass — 2 PASS 1 WARN (pre-existing LTS5 unresolved member) |
+| Contract | `python3 .agents/skills/data-contract/scripts/odcs.py check` | 0 | pass — no finding names this contract |
+| Ontology | `ossie.py validate ontology/` / `refs` / `glossary` | 0 each | pass — no mapping edited; the fleet document was not touched |
+| Python tests (repo) | `python3 -m pytest tests/test_odcs_contracts.py tests/test_ossie_validate.py tests/test_ossie_compile.py -q` | 0 | pass — 149 passed |
+| Python lint | `ruff check .` | 0 | pass — all checks passed |
+| SQL lint | `sqlfluff lint transformation/models/marts/agg/agg_borough_flow_monthly.sql` | 0 | pass — no findings |
+| Map and ADR tests | `python3 -m pytest tests/test_adr_links.py tests/test_maps.py -q` | 0 | pass — 32 passed |
+| ADR numbering | `python3 .github/scripts/adr_lint.py` | 0 | pass — no duplicates, no dangling citations |
+| Baseline cross-check | not run | - | not applicable: the duckdb_local dbt card's `## Defer` says no production manifest is published, so `/data/cache` holds none and no `state:modified` comparison exists |
+| Governance | not run | - | not applicable: DuckDB has no row filters, masks or access policies |
+
+**Scope check.** The intent touched only the Plan's rows: the new model and its properties, three singular tests, the Ossie document and its regenerated tests, the contract, `test-map.json`, the design record, three ADRs (two new, one corrected) and link-only additions to six existing ADRs' `## Affected designs`. No published model, macro, seed, project config or profile changed. Nothing in `core`, `finance`, `ops`, `intermediate`, `staging` or `macros` differs from the merge base, so no published promise moved and no consumer was affected.
+
+**Findings recorded, not fixed.** Two pre-existing conditions surfaced and are out of this intent's scope: `test-map.json` named a nonexistent `tests/test_odcs.py` (removed, so the module's command now runs), and the fleet document carries 5 column-type warnings plus one `refs` warning about `medallion_number`.
+
+**Limits.** The share's numerator and denominator are published as columns and specified in the contract and ADRs, but they are not semantic-layer metrics: the trips star cannot express a condition over both zone roles at borough grain, so no honest binding exists and the generated content test could not hold one. A consumer reading a canonical share must read the relation directly.
+
 ## Discovery
+
 
 Design-time discovery for `agg_borough_flow_monthly`. Every query ran read-only against the Domain warehouse (`target: domain`); the sandbox is a copy taken at activation and holds the same relations, so nothing here needed the sandbox.
 
