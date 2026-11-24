@@ -20,7 +20,7 @@ an artefact of the instrument.
 
 {% docs fare_residual %}
 Trip total minus every component this warehouse models: fare, tip, tolls, extra,
-MTA tax, improvement surcharge and congestion surcharge.
+MTA tax, improvement surcharge, congestion surcharge and airport fee.
 
 A non-zero residual means either a surcharge TLC introduced that is not yet
 modelled, or a total that was not derived from its parts. It is published as its

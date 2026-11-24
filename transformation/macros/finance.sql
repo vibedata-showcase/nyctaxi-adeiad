@@ -20,6 +20,11 @@
 {#-
   What the total does not explain. A non-zero residual means either a component
   we do not model, or a total that was not derived from its parts.
+
+  The airport fee is subtracted here rather than folded into surcharge_columns():
+  total_surcharges is published as a measure of its own and the fee is published
+  as its own component in the revenue bridge, so adding it there would move four
+  published measures and land the fee in the walk twice.
 -#}
 {% macro fare_residual(alias='t') -%}
     (
@@ -28,6 +33,7 @@
         - coalesce({{ alias }}.tip_amount, 0)
         - coalesce({{ alias }}.tolls_amount, 0)
         - {{ total_surcharges(alias) }}
+        - coalesce({{ alias }}.airport_fee, 0)
     )
 {%- endmacro %}
 
