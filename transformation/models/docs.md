@@ -55,3 +55,10 @@ This is a property of the business, not missing data. `is_fleet_attributed`
 states it explicitly so that no consumer has to infer it from a null, and so
 that a fleet-level denominator is never taken over the whole fact.
 {% enddocs %}
+
+{% docs mart_zone_revenue_billable_trip_count %}
+Billable trips on this zone-day: the build's `billable_trip_count`, not its
+all-trips `trip_count`. The billable rule (ADR 0003) is evaluated once, in
+`agg_trip_zone_daily` (ADR 0018); a zone-day with no billable trip is not a row
+of this report.
+{% enddocs %}

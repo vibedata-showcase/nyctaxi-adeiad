@@ -1,0 +1,104 @@
+version: 2
+
+unit_tests:
+  # --- mart_daily_zone_revenue: the projection and the billable filter --------
+  - name: zone_revenue_projects_the_builds_billable_measures
+    description: >
+      Each published column reads the build's billable measure under the report's
+      own name: trip_count is billable_trip_count, total_revenue is billable_revenue,
+      and the four components keep their component.
+    model: mart_daily_zone_revenue
+    given:
+      - input: ref('agg_trip_zone_daily')
+        rows:
+          - pickup_date: '2024-02-01'
+            pickup_location_id: 132
+            borough_name: Queens
+            zone_name: JFK Airport
+            reporting_region: Queens
+            billable_trip_count: 3826
+            billable_fare_revenue: 200000.5
+            billable_tip_revenue: 20000.25
+            billable_surcharge_revenue: 1524.0
+            billable_toll_revenue: 400.75
+            billable_revenue: 221945.5
+    expect:
+      rows:
+        - trip_date: '2024-02-01'
+          pickup_location_id: 132
+          borough: Queens
+          zone_name: JFK Airport
+          reporting_region: Queens
+          trip_count: 3826
+          fare_revenue: 200000.5
+          tip_revenue: 20000.25
+          surcharge_revenue: 1524.0
+          toll_revenue: 400.75
+          total_revenue: 221945.5
+
+  - name: zone_revenue_keeps_only_zone_days_with_a_billable_trip
+    description: >
+      A zone-day the build carries with no billable trip is not a row of this
+      report; a zone-day beside it that has one is.
+    model: mart_daily_zone_revenue
+    given:
+      - input: ref('agg_trip_zone_daily')
+        rows:
+          - pickup_date: '2024-02-12'
+            pickup_location_id: 175
+            borough_name: Manhattan
+            zone_name: Unresolved
+            reporting_region: Manhattan
+            billable_trip_count: 0
+            billable_fare_revenue: 0.0
+            billable_tip_revenue: 0.0
+            billable_surcharge_revenue: 0.0
+            billable_toll_revenue: 0.0
+            billable_revenue: 0.0
+          - pickup_date: '2024-02-12'
+            pickup_location_id: 138
+            borough_name: Queens
+            zone_name: LaGuardia Airport
+            reporting_region: Queens
+            billable_trip_count: 12
+            billable_fare_revenue: 900.0
+            billable_tip_revenue: 100.0
+            billable_surcharge_revenue: 6.0
+            billable_toll_revenue: 0.0
+            billable_revenue: 1006.0
+    expect:
+      rows:
+        - trip_date: '2024-02-12'
+          pickup_location_id: 138
+          borough: Queens
+          zone_name: LaGuardia Airport
+          reporting_region: Queens
+          trip_count: 12
+          fare_revenue: 900.0
+          tip_revenue: 100.0
+          surcharge_revenue: 6.0
+          toll_revenue: 0.0
+          total_revenue: 1006.0
+
+  - name: zone_revenue_drops_a_zone_day_whose_billable_count_is_unknown
+    description: >
+      The build's billable_trip_count is never null, but the filter is written
+      `> 0`, so an unknown count is not published as a row of the report rather
+      than silently passing a null trip total through.
+    model: mart_daily_zone_revenue
+    given:
+      - input: ref('agg_trip_zone_daily')
+        rows:
+          - pickup_date: '2024-03-04'
+            pickup_location_id: 7
+            borough_name: Queens
+            zone_name: Astoria
+            reporting_region: Queens
+            billable_trip_count: null
+            billable_fare_revenue: 0.0
+            billable_tip_revenue: 0.0
+            billable_surcharge_revenue: 0.0
+            billable_toll_revenue: 0.0
+            billable_revenue: 0.0
+    expect:
+      rows: []

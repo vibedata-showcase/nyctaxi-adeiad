@@ -2,7 +2,7 @@ apiVersion: v3.2.0
 kind: DataContract
 id: edf94c85-cbf3-58ee-9672-f448930698dd
 name: mart_daily_zone_revenue
-version: 1.0.1
+version: 1.0.2
 status: active
 servers:
   - server: sample-nyctaxi-comp
@@ -43,6 +43,7 @@ schema:
       - name: trip_count
         logicalType: integer
         physicalType: BIGINT
+        description: 'Billable trips: trips whose total amount is positive, in the reporting window (ADR 0003), read from agg_trip_zone_daily''s billable_trip_count.'
       - name: fare_revenue
         logicalType: number
         physicalType: DOUBLE

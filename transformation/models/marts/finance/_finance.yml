@@ -3,8 +3,10 @@ version: 2
 models:
   - name: mart_daily_zone_revenue
     description: >
-      Daily revenue by pickup zone. The billable rule (ADR 0003) is applied
-      here and nowhere upstream.
+      Daily revenue by pickup zone, projected from agg_trip_zone_daily. The
+      billable rule (ADR 0003) and the reporting window are applied once in that
+      build (ADR 0018), so this report and Operations' daily zone figures cannot
+      disagree. Zone-days with no billable trip are not rows of this report.
     contract: {enforced: true}
     columns:
       - name: trip_date
@@ -24,7 +26,7 @@ models:
         data_type: VARCHAR
       - name: trip_count
         data_type: BIGINT
-        description: Trips, billable or not.
+        description: '{{ doc("mart_zone_revenue_billable_trip_count") }}'
       - name: fare_revenue
         data_type: DOUBLE
       - name: tip_revenue
