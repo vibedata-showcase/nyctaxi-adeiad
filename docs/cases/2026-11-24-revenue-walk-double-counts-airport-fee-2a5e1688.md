@@ -46,3 +46,6 @@ Not checked: whether any consumer outside this repo reads the walk's total befor
 The candidate repairs and the one chosen are settled in [`docs/adr/0018-the-revenue-walk-decomposes-the-total-it-reports.md`](../adr/0018-the-revenue-walk-decomposes-the-total-it-reports.md) and the design records it lists: the residual stops absorbing `airport_fee`, so the nine published components are a true decomposition of the total the same row group reports. The alternative — drop `c_airport_fee` as a component and leave the fee in the residual — was rejected because it would hide the airport fee from the walk the finance team reads it in.
 
 ## Approvals
+
+- 2026-11-24T17:58:55Z — design approved — "approve" — 21664f2
+- 2026-11-24T17:58:55Z — breaking contract approved — "approve: full-refresh core.fct_trip; the promised shape is unchanged (no column added, removed or retyped), values only" — 21664f2
