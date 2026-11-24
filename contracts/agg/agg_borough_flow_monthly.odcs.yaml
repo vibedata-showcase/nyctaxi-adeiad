@@ -1,0 +1,137 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: a7a74d78-4353-4017-8336-e59853cf276b
+name: agg_borough_flow_monthly
+version: 1.0.0
+status: proposed
+servers:
+  - server: sample-nyctaxi-comp
+    type: duckdb
+    database: domain.duckdb
+    schema: agg
+schema:
+  - name: agg_borough_flow_monthly
+    dataGranularityDescription: >-
+      One row per month, origin borough and destination borough, the month being month_start_date.
+      The grid is complete: every borough the zone lookup holds is an origin and a destination in every
+      month of the reporting window, and a pair-month with no billable trip is a row of zero trips and
+      zero revenue (ADR 0018), so sum(trip_count) over the table equals the window's billable trips.
+    properties:
+      - name: month_start_date
+        description: "First day of the month the trips were picked up in."
+        logicalType: date
+        physicalType: DATE
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: month_name
+        description: "Name of the month, from the calendar dimension, so a reader can label a row without joining a date table."
+        logicalType: string
+        physicalType: VARCHAR
+      - name: calendar_year
+        description: "Calendar year of the month."
+        logicalType: integer
+        physicalType: INTEGER
+      - name: origin_borough
+        description: "Borough of the pickup zone, at the zone version in force on the trip's date. N/A and Unknown are the unresolved group, flagged by origin_is_unresolved (ADR 0012)."
+        logicalType: string
+        physicalType: VARCHAR
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+          - type: library
+            metric: invalidValues
+            arguments:
+              validValues:
+                - Manhattan
+                - Brooklyn
+                - Queens
+                - Bronx
+                - Staten Island
+                - EWR
+                - Unknown
+                - N/A
+            mustBe: 0
+      - name: origin_is_unresolved
+        description: "True when the pickup zone's borough is one the dimension cannot resolve (N/A or Unknown). The row is still published; the flag says why it carries no cross-borough share (ADR 0012, ADR 0004)."
+        logicalType: boolean
+        physicalType: BOOLEAN
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: dest_borough
+        description: "Borough of the dropoff zone, at the zone version in force on the trip's date. N/A and Unknown are the unresolved group, flagged by dest_is_unresolved."
+        logicalType: string
+        physicalType: VARCHAR
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+          - type: library
+            metric: invalidValues
+            arguments:
+              validValues:
+                - Manhattan
+                - Brooklyn
+                - Queens
+                - Bronx
+                - Staten Island
+                - EWR
+                - Unknown
+                - N/A
+            mustBe: 0
+      - name: dest_is_unresolved
+        description: "True when the dropoff zone's borough is one the dimension cannot resolve (N/A or Unknown)."
+        logicalType: boolean
+        physicalType: BOOLEAN
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: is_cross_borough
+        description: "True when the pickup and dropoff both resolve to a borough and the two boroughs differ, so the trip left the borough it started in (ADR 0019). False on the diagonal and on every cell with an unresolved end."
+        logicalType: boolean
+        physicalType: BOOLEAN
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: trip_count
+        description: "Billable trips picked up in the month that ran between the pair, at any volume: the table has no floor, so a pair of one trip is published (ADR 0018)."
+        logicalType: integer
+        physicalType: BIGINT
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: total_revenue
+        description: "Sum of total_amount over the pair's billable trips, zero on a pair-month with no trip."
+        logicalType: number
+        physicalType: DOUBLE
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: resolved_trip_count
+        description: "The origin's trips in the month whose destination resolves to a borough: the denominator of cross_borough_share_pct. An origin-month value repeated on every row of that origin, never summed across rows."
+        logicalType: integer
+        physicalType: BIGINT
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: cross_borough_trip_count
+        description: "The origin's trips in the month that ended in a different borough: the numerator of cross_borough_share_pct. An origin-month value repeated on every row of that origin, never summed across rows."
+        logicalType: integer
+        physicalType: BIGINT
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: cross_borough_share_pct
+        description: "Percentage of the origin's resolved-destination trips that ended in another borough, rebuilt from the two counts beside it (ADR 0016). Null on every row whose origin or destination is unresolved, where no borough-to-borough rate exists; the two counts show the basis."
+        logicalType: number
+        physicalType: DOUBLE

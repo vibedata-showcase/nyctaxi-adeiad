@@ -539,3 +539,64 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+  - name: agg_borough_flow_monthly
+    description: >
+      Borough-to-borough flow, one row per month, origin borough and destination
+      borough. The grid is complete -- every borough the zone lookup holds is an
+      origin and a destination in every month, and a pair-month with no billable
+      trip is a row of zero trips and zero revenue -- so sum(trip_count) over the
+      table equals the window's billable trips. There is no volume floor
+      (ADR 0018), unlike the zone-pair matrix. is_cross_borough is true only when
+      both ends resolve to a borough and the two differ (ADR 0019), and N/A and
+      Unknown stay in the table as their own flagged group (ADR 0012).
+    contract: {enforced: true}
+    columns:
+      - name: month_start_date
+        data_type: DATE
+        data_tests: [not_null]
+        description: First day of the month the trips were picked up in.
+      - name: month_name
+        data_type: VARCHAR
+        description: Name of the month, from the calendar dimension, so a reader can label a row without joining a date table.
+      - name: calendar_year
+        data_type: INTEGER
+        description: Calendar year of the month.
+      - name: origin_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough of the pickup zone, at the zone version in force on the trip's date. N/A and Unknown are the unresolved group, flagged by origin_is_unresolved (ADR 0012).
+      - name: origin_is_unresolved
+        data_type: BOOLEAN
+        data_tests: [not_null]
+        description: True when the pickup zone's borough is one the dimension cannot resolve (N/A or Unknown). The row is still published; the flag says why it carries no cross-borough share (ADR 0012, ADR 0004).
+      - name: dest_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough of the dropoff zone, at the zone version in force on the trip's date. N/A and Unknown are the unresolved group, flagged by dest_is_unresolved.
+      - name: dest_is_unresolved
+        data_type: BOOLEAN
+        data_tests: [not_null]
+        description: True when the dropoff zone's borough is one the dimension cannot resolve (N/A or Unknown).
+      - name: is_cross_borough
+        data_type: BOOLEAN
+        data_tests: [not_null]
+        description: True when the pickup and dropoff both resolve to a borough and the two boroughs differ, so the trip left the borough it started in (ADR 0019). False on the diagonal and on every cell with an unresolved end.
+      - name: trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: Billable trips picked up in the month that ran between the pair, at any volume -- the table has no floor, so a pair of one trip is published (ADR 0018).
+      - name: total_revenue
+        data_type: DOUBLE
+        data_tests: [not_null]
+        description: Sum of total_amount over the pair's billable trips, zero on a pair-month with no trip.
+      - name: resolved_trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: The origin's trips in the month whose destination resolves to a borough, the denominator of cross_borough_share_pct. An origin-month value repeated on every row of that origin, never summed across rows.
+      - name: cross_borough_trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: The origin's trips in the month that ended in a different borough, the numerator of cross_borough_share_pct. An origin-month value repeated on every row of that origin, never summed across rows.
+      - name: cross_borough_share_pct
+        data_type: DOUBLE
+        description: Percentage of the origin's resolved-destination trips that ended in another borough, rebuilt from the two counts beside it (ADR 0016). Null on every row whose origin or destination is unresolved, where no borough-to-borough rate exists; the two counts show the basis.
