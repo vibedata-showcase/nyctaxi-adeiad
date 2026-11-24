@@ -63,3 +63,4 @@ None. Three things the answers do not settle are recorded for design, not for yo
 ## Approvals
 - 2026-11-24T14:13:23Z — requirement approved — "Approve the Requirement and start the design" — d97f630
 - 2026-11-24T14:22:01Z — design approved — "Approve the design but do not plan yet" — 54198a5
+- 2026-11-24T14:53:19Z — ship approved — "Approve shipping an intent PR" — e213fb9
