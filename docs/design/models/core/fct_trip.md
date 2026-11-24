@@ -19,6 +19,7 @@ One row per distinct TLC trip, keyed by `trip_key`. Every conformed trip is reta
 - `D-05` `measurable_tip_rate` is null where the payment method does not record tips ([ADR 0011](../../../adr/0011-tips-are-measured-only-where-the-meter-records-them.md)). Source: [ADR 0011](../../../adr/0011-tips-are-measured-only-where-the-meter-records-them.md).
 - `D-06` `is_billable` looks only at the total amount; no payment method is excluded by it, and each metric decides ([ADR 0013](../../../adr/0013-no-charge-and-dispute-payments-are-not-excluded-by-the-billable-rule.md)). Source: [ADR 0013](../../../adr/0013-no-charge-and-dispute-payments-are-not-excluded-by-the-billable-rule.md).
 - `D-07` `trip_key` is the key produced by `int_trips_conformed` ([ADR 0007](../../../adr/0007-trip-key-has-one-definition.md)). Source: docs/requirement/2026-08-29-the-trip-fact.md R-06, [ADR 0007](../../../adr/0007-trip-key-has-one-definition.md).
+- `D-08` `fare_residual` subtracts *every* modelled component, the airport fee included, so the column means what `CONTEXT.md` says a residual is: what is left of the total after every modelled fare component. A component the fact publishes but the residual ignores is counted twice by anything that sums the components, which is how the revenue walk overstated Q1 revenue. Source: docs/cases/2026-11-24-revenue-walk-double-counts-airport-fee-ca72c1e0.md.
 
 ## Rejected
 
@@ -44,3 +45,4 @@ metrics:
 
 - - 2026-08-29 — trip-fact — design record written (commit 97862f7) — D-01, D-02, D-03, D-04
 - - 2026-10-14 — setup-dlt-ingestion — rows come from `int_trips_conformed`; record conformed to the template; ADR links added — D-05, D-06, D-07
+- - 2026-11-24 — r9-revenue-walk-fix — the residual subtracts the airport fee, so the published column matches the glossary — D-08
