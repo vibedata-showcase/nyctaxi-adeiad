@@ -23,3 +23,4 @@ Every trip carries its quality verdicts: refund (negative total), zero distance,
 
 - [`models/intermediate/int_trip_quality_flags.md`](../design/models/intermediate/int_trip_quality_flags.md)
 - [`models/core/fct_trip.md`](../design/models/core/fct_trip.md)
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)

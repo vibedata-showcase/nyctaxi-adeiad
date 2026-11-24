@@ -36,6 +36,21 @@ Relation `agg.agg_borough_flow_monthly`, columns in this order:
 | `origin_cross_borough_trip_count` | BIGINT | Those of them that end elsewhere; repeats likewise; null on an `unresolved` origin (D-07). |
 | `cross_borough_trip_share` | DOUBLE | The two counts divided, null when the denominator is zero (D-07). |
 
+## Where the rules apply
+
+| Rule | How it applies to this table |
+| --- | --- |
+| [ADR 0003](../../../adr/0003-billable-trip-definition-and-where-it-applies.md) | Applied in the model's `WHERE`: `is_billable` and `in_report_window(pickup_datetime)`. This is a revenue and flow surface, so it filters rather than reporting billable and non-billable side by side (D-02). |
+| [ADR 0004](../../../adr/0004-quality-verdicts-flag-trips-and-never-delete-them.md) | Not applied: no quality verdict excludes a trip, and the table carries no verdict column, so a consumer filtering verdicts goes to `fct_trip` through `trip_quality_key` (D-18). |
+| [ADR 0012](../../../adr/0012-unresolved-zones-are-retained-and-flagged.md) | Applied by keeping the unplaced zones and giving them one `unresolved` group in each role, outside the share and inside the totals (D-05, D-06, D-14). |
+| [ADR 0013](../../../adr/0013-no-charge-and-dispute-payments-are-not-excluded-by-the-billable-rule.md) | Applied: the revenue measure counts the no-charge and dispute payment methods, because the billable rule reads only the total (D-09). |
+| [ADR 0014](../../../adr/0014-weeks-start-on-monday.md) | Not applicable: the table's period is the month, and it takes no week boundary. |
+| [ADR 0015](../../../adr/0015-unmatched-dimension-keys-stay-null.md) | Applied: a null zone key keeps its trip and lands in the `unresolved` group rather than being dropped by the join (D-05). |
+| [ADR 0016](../../../adr/0016-rates-are-rebuilt-from-summed-numerators-and-denominators.md) | Applied: the share is a ratio of summed counts through `safe_divide`, null on a zero denominator, and both counts ship so no consumer averages the row-level shares (D-19). |
+| [ADR 0017](../../../adr/0017-published-flows-have-a-25-trip-floor.md) | Not applied here, and unchanged there: the floor stays on the zone-pair matrix. This table's departure is recorded in ADR 0018 (D-03). |
+| [ADR 0018](../../../adr/0018-a-borough-flow-carries-no-trip-floor.md) | Applied: no floor and no minimum cell size, so the totals close to the star (D-03). |
+| [ADR 0019](../../../adr/0019-the-cross-borough-share-is-per-origin-borough.md) | Applied: the share is per origin borough and month, over located destinations, published with its numerator and denominator (D-06, D-07). |
+
 ## Decisions
 
 - `D-01` A table in `agg`, materialised as a table like every other mart, rebuilt by the ordinary `dbt build`; no incremental strategy and no schedule of its own. The reporting window is a closed range that every run rebuilds whole, and a partial refresh would leave a month half-computed. Source: repository convention (`.agents/skills/dbt-models`, materialisation table), R-01.
@@ -55,6 +70,8 @@ Relation `agg.agg_borough_flow_monthly`, columns in this order:
 - `D-15` A new ODCS contract at `contracts/agg/agg_borough_flow_monthly.odcs.yaml`, version 1.0.0, `status: proposed` until the relation is built and `active` after, declaring the composite grain key; `generate` writes the dbt keys from it and nothing is hand-written on the model. Source: R-09, `.agents/skills/data-contract`.
 - `D-16` The ontology gains no concept and no new mapping for this relation: an aggregate mart rolls up concepts it already maps, and it reaches no concept of its own. Source: R-09, `.agents/skills/ontology/references/classification.md` ("Aggregate or report mart: No").
 - `D-17` The semantic-model coverage command in `test-map.json` gains `--exclude agg.agg_borough_flow_monthly`, so the coverage gate keeps passing with the new relation on disk and the exclusion is what the command reads. Source: R-09, repository (`test-map.json` `logical-model.commands.structural`).
+- `D-18` No quality verdict filters a trip here: this table keeps every billable trip, including the ones carrying a verdict such as zero distance, an implausible speed or an undocumented rate code. The rows a consumer might want to exclude are reachable through `trip_quality_key` on the fact, and this surface does not pre-empt that choice. Source: user answer at the design stop ("Also show where ADR 0016 and ADR 0004 apply"), [ADR 0004](../../../adr/0004-quality-verdicts-flag-trips-and-never-delete-them.md).
+- `D-19` The share is a ratio of summed counts, through `safe_divide`, and null when the denominator is zero — never the mean of the destination rows' shares. The two counts ship beside it, so a consumer rolling the table up or down can re-sum the numerator and the denominator rather than average a rate. Source: user answer at the design stop, [ADR 0016](../../../adr/0016-rates-are-rebuilt-from-summed-numerators-and-denominators.md), R-06.
 
 ## Rejected
 
@@ -88,3 +105,4 @@ ontology:
 ## History
 
 - 2026-11-24 — ss-borough-flow-951b6777 — design record written; grain, population, unresolved group, share definition, semantic exclusion and contract chosen — D-01…D-17 — terms: none new (Borough, Borough flow and Cross-borough trip were added with the requirement)
+- 2026-11-24 — ss-borough-flow-951b6777 — amended at the design stop: ADR 0004 and ADR 0016 stated as applied or not applied, a `## Where the rules apply` table added — D-18, D-19 — terms: none new
