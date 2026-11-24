@@ -63,8 +63,10 @@ models:
   - name: mart_revenue_component_bridge
     description: >
       The fare-to-total walk, unpivoted one component per row. The residual is
-      its own component rather than being absorbed into a real one: if it is
-      non-zero the walk does not balance, and that is a finding about the source.
+      its own component rather than being absorbed into a real one: the lines
+      sum to the group's total_amount by construction, so a non-zero c_residual
+      is the part of the total no other component explains -- a finding about
+      the source, not an unbalanced walk.
     contract: {enforced: true}
     columns:
       - name: component_name
