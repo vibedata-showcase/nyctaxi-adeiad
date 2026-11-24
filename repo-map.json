@@ -137,6 +137,10 @@
   },
   "semantic_exclusions": [
     {
+      "relation": "agg.agg_borough_flow_matrix",
+      "reason": "Not a star member: it drops EWR on both sides, so its trip_count and revenue are a narrower population than the star's billable metrics and binding them would make one metric name mean two populations; its borough columns carry an 'unresolved' group that is no member of the borough level; and its cross_borough_share is a per-origin rate repeated across rows, which the semantic layer refuses as a precomputed rate on a source (ADR 0018)."
+    },
+    {
       "relation": "agg.agg_od_flow_matrix",
       "reason": "Not a star member: a HAVING floor keeps only well-populated origin-destination pairs (ADR 0017), so it is a filtered population, not the full set of trips; a model over it would mislead."
     },

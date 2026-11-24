@@ -30,3 +30,7 @@ ADR 0017's 25-trip floor is **not** applied here; it stays the rule for the zone
 - The leaving share is one value per origin borough per month, repeated on each of that origin's destination rows. Summing or averaging it across rows is meaningless, and a consumer that wants it once takes any one row of the origin's month.
 - A share is null, never zero, when a borough sent no trip to a resolved destination in the month: an empty denominator is not a measured zero (ADR 0016). The `unresolved` group carries no share at all, for the same reason it is no borough: a trip starting in a zone TLC cannot place leaves no borough to measure against.
 - A consumer that wants the unresolved group out filters it; the surface keeps it, per ADR 0012.
+
+## Affected designs
+
+- [`models/agg/agg_borough_flow_matrix.md`](../design/models/agg/agg_borough_flow_matrix.md)
