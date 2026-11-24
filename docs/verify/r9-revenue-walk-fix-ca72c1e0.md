@@ -2,19 +2,62 @@
 
 ## Verification
 
-`verdict: pending` at `1184020d14`: discovery for the revenue-walk case; no gate has run yet.
+`verdict: verified` at `d13c51eefa771bdfa471836ea245cb4484be21b2`: the revenue walk's nine component rows now sum to its own `total_amount` in every month of Q1 2024 (gap ≤ 5e-9), the airport fee is counted once, `billable_revenue` is unchanged at 2,629,185.82, and the balance test that failed on 9 groups before the fix passes.
 
 ## Coverage
 
 | Item | Evidence | Result | At |
 | --- | --- | --- | --- |
-| — | — | discovery only | `1184020d14` |
+| The walk's components sum to its `total_amount` per group | `select trip_month, sum(case when component_name = 'c_fare' then total_amount else 0 end) as walk_total, sum(component_amount) as component_sum, sum(component_amount) - sum(case when component_name = 'c_fare' then total_amount else 0 end) as gap from finance.mart_revenue_component_bridge group by 1 order by 1` (ephemeral) | 3 rows, `gap` −3.1e-9 / −4.4e-9 / −4.8e-9; component sum 2,629,185.82 against walk total 2,629,185.82, was 2,641,448.07 | `d13c51e` |
+| The same claim as a gate, and it failed before the fix | `dbt test --target dev --select assert_revenue_bridge_components_sum_to_total` | exit 0, `PASS=1`; before the fix (commit `9482c8d`) the same test exited 1 over 9 groups totalling 12,262.25 (Jan Manhattan 5.25, Jan Queens 3,984.75) | `d13c51e` |
+| The airport fee leaves the residual, and stays its own component | per-month `c_airport_fee` = 3,997.00 / 3,550.75 / 4,714.50 (unchanged) and `c_residual` = −12,848.50 / −11,481.50 / −8,308.75 = each month's old value minus that month's fee; `select sum(case when component_name = 'c_residual' then component_amount else 0 end) from finance.mart_revenue_component_bridge` = −32,638.75 = `select sum(fare_residual) from core.fct_trip where is_billable and pickup_datetime in Q1` = −32,638.75 | fee counted once; the walk's residual is the fact's residual | `d13c51e` |
+| `billable_revenue` is unchanged and is the right number | independent recomputation `select sum(total_amount) from core.fct_trip where is_billable and pickup in Q1` = 2,629,185.82 and `finance.mart_daily_zone_revenue` `total_revenue` = 2,629,185.82; canonical `semantic_query{metrics:["billable_revenue"], mode:"run", target:"ephemeral"}` = 2,629,185.82 (`LTS1_detail`, model `nyc_taxi_trips` at `d13c51e`) | 2,629,185.82 three ways; no golden baseline is configured, independent recomputation stands in | `d13c51e` |
+| No trip is lost and the grain is unchanged | `with g as (select trip_month, service_type_key, borough_name, max(total_amount), max(trip_count) from finance.mart_revenue_component_bridge group by 1,2,3) select sum(total_amount), sum(trip_count) from g` = 2,629,185.82 / 95,958 = the billable Q1 trip count | 95,958 walk trips = 95,958 billable trips | `d13c51e` |
+| `total_surcharges` and `surcharge_columns()` are untouched | `git diff 1184020..d13c51e -- transformation/macros/finance.sql` adds only the `airport_fee` term and a comment; `surcharge_columns()` still returns extra, mta_tax, improvement_surcharge, congestion_surcharge; `finance.mart_daily_zone_revenue.total_revenue` = 2,629,185.82 | the four surcharge measures did not move | `d13c51e` |
+| The `fare_residual` doc block names the airport fee | `transformation/models/docs.md` doc block vs `transformation/macros/finance.sql` line by line | the block's list (fare, tip, tolls, extra, MTA tax, improvement surcharge, congestion surcharge, airport fee) is exactly the macro's subtraction | `d13c51e` |
+| The walk's contract and prose say what a non-zero residual means | `contracts/finance/mart_revenue_component_bridge.odcs.yaml` `dataGranularityDescription`, `transformation/models/marts/finance/_finance.yml` description, model header comment, vs the per-month query above | all three say the components sum to the group total and a non-zero residual means the total is not the sum of its modelled parts; the query agrees | `d13c51e` |
+| Blast radius: the scorecard's unbalanced count falls as the case states | `select sum(unbalanced_total_count) from ops.mart_trip_quality_scorecard where trip_month in Q1` = 26,457 = `select count(*) from core.fct_trip where pickup in Q1 and abs(fare_residual) > 0.01` = 26,457; the pre-fix figure was 31,869 | 5,412 trips moved from unbalanced to balanced, as the case claims | `d13c51e` |
+| `T1` the balance test (`assert_revenue_bridge_components_sum_to_total.sql`) | `dbt test --select assert_revenue_bridge_components_sum_to_total`, and the full build | exit 0, `PASS=1` in the build's 240 nodes | `d13c51e` |
+| `T1` `test-map.json` | `python3 -m pytest tests -q` (the map tests fail on a layer with no module or a selector that selects nothing) | exit 0, 222 passed | `d13c51e` |
+| `T2` the `fare_residual` macro | `dbt build --full-refresh` + the per-month reconciliation | exit 0; every month balances | `d13c51e` |
+| `T2` `transformation/models/docs.md` | `dbt docs generate --static` (exit 0, catalog written) and the doc block read against the macro | exit 0; text matches the code | `d13c51e` |
+| `T3` the contract | `odcs.py check` exit 0, `odcs.py diff origin/main` exit 0 (`diff/descriptive`, version 1.0.1 → 1.0.2) | prose only; version moved as far as the change needs | `d13c51e` |
+| `T3` `_finance.yml` | `odcs.py generate` (exit 0, output `[]`) then `git diff --stat` | `generate` left the corrected relation description in place and touched no other file, so the relation description is hand-written and stays in step with the contract by hand | `d13c51e` |
+| `T3` the model header comment | `git diff 1184020..d13c51e -- transformation/models/marts/finance/mart_revenue_component_bridge.sql` | comment only; no SQL changed, and the rebuilt relation is byte-identical in shape (9 components, same grain, same rows) | `d13c51e` |
 
 ## Gate results
 
 | Gate | Command | Exit | Outcome |
 | --- | --- | --- | --- |
-| — | — | - | unrun (design stage) |
+| Full build (fix class: re-run the affected models and tests) | `cd transformation && dbt build --full-refresh --target dev --exclude package:dbt_project_evaluator` | 0 | pass — `PASS=239 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=240` |
+| Sandbox destination of the build | `python3 /data/default-plugins/vibedata-data-engineering/0.148.26/scripts/assert_dbt_destination.py` | 0 | pass — `DESTINATION_OK: 67 built relation(s) landed in the sandbox ephm_nyc-taxi-duckdb-100k_r9-revenue-walk-fix-ca72c1e0` |
+| The originally failing signal | `cd transformation && dbt test --target dev --select assert_revenue_bridge_components_sum_to_total` | 0 | pass — `PASS=1 WARN=0 ERROR=0`; it exited 1 on 9 groups before the fix |
+| Data tests over the impacted closure | `cd transformation && dbt test --target dev --exclude test_type:unit --select +mart_revenue_component_bridge+` | 0 | pass — `PASS=76 WARN=1 ERROR=0`; the warning is `assert_semantic_levels_hold` |
+| Unit tests | `cd transformation && dbt test --target dev --select test_type:unit` | 0 | pass — `PASS=6 WARN=0 ERROR=0` |
+| Semantic content and level tests | `cd transformation && dbt test --target dev --select assert_semantic_content_holds assert_semantic_level_keys_hold assert_semantic_levels_hold` | 0 | pass with warning — `PASS=2 WARN=1`; `assert_semantic_levels_hold` warns by config over `agg_weather_demand_daily` rows on the `unresolved` borough sentinel (LTS5), it reads no fare column, and it warned in the pre-fix build too |
+| Contract static gate | `python3 .agents/skills/data-contract/scripts/odcs.py check` | 0 | pass — 3 findings, all `boundary/excluded` info for the three declared `semantic_exclusions`; run as the last invocation of a full build, because `check` reads the last dbt run's results |
+| Contract version | `python3 .agents/skills/data-contract/scripts/odcs.py diff origin/main` | 0 | pass — one `diff/descriptive` (the grain description), version moved to 1.0.2 |
+| Contract against the built relation | `python3 .agents/skills/data-contract/scripts/odcs.py check --relations --catalog /data/ephm_duckdb/ephm_nyc-taxi-duckdb-100k_r9-revenue-walk-fix-ca72c1e0.duckdb` | 0 | pass — same 3 info findings, no `relations/mismatch` |
+| Contract against the relation, as the repo-map writes it | `python3 .agents/skills/data-contract/scripts/odcs.py check --relations` | 1 | unrun — `catalog/missing`: on `duckdb_local` this form names no warehouse, so the sandbox database file has to be passed as `--catalog` (row above); not a contract failure |
+| Contract profile, the changed relation | `python3 .agents/skills/data-contract/scripts/odcs.py profile --relation finance.mart_revenue_component_bridge --catalog /data/ephm_duckdb/ephm_nyc-taxi-duckdb-100k_r9-revenue-walk-fix-ca72c1e0.duckdb` | 0 | pass — `[]`: the primary key does not repeat or hold a null, every `required` property holds, no `invalidValues` violation |
+| Contract profile, every contract | `python3 .agents/skills/data-contract/scripts/odcs.py profile --catalog /data/ephm_duckdb/ephm_nyc-taxi-duckdb-100k_r9-revenue-walk-fix-ca72c1e0.duckdb` | 0 | pass with 24 warnings, all `profile/unchecked`: relationship claims the contracts' own schemas cannot test (`core.fct_trip` 9, `core.fct_status_interval` 5, `core.fct_shift` 4, `core.fct_maintenance` 3, `core.bridge_zone_poi`/`core.dim_driver`/`finance.mart_daily_zone_revenue` 1 each). Unproven, not passing; the bridge's contract carries none |
+| Semantic structural gate: validate | `python3 .agents/skills/semantic-model/scripts/ossie.py validate logical-model/` | 0 | pass |
+| Semantic structural gate: coverage | `python3 .agents/skills/semantic-model/scripts/ossie.py coverage logical-model/ <four marts roots> --exclude agg.agg_od_flow_matrix --exclude finance.mart_revenue_component_bridge --exclude core.dim_fare_regime` | 0 | pass — `0 coverage error(s)`; the bridge reports `excluded from coverage`, as declared |
+| Semantic structural gate: suppliers | `python3 .agents/skills/semantic-model/scripts/ossie.py suppliers logical-model/` | 0 | pass — `[]`, 0 unsupplied items |
+| Semantic structural gate: notes | `python3 .agents/skills/semantic-model/scripts/ossie.py notes logical-model/ transformation/tests docs/adr` | 0 | pass — 0 dangling pointers, 0 unchecked directories |
+| Semantic structural gate: generated tests | `python3 .agents/skills/semantic-model/scripts/ossie.py generate-tests logical-model/ transformation/tests --check` | 0 | pass — 3 generated tests, 0 stale |
+| Semantic marts gate: bindings | `python3 .agents/skills/semantic-model/scripts/ossie.py bindings logical-model/ transformation/target/manifest.json` | 0 | pass — 63 models with SQL, 0 error, 0 warning |
+| Semantic marts gate: columns | `python3 .agents/skills/semantic-model/scripts/ossie.py columns logical-model/ transformation/target/catalog.json` | 0 | pass with 5 warnings, all pre-existing `columns/datatype-mismatch` (a `Decimal` field declared against a DOUBLE/BIGINT physical column, `trips.fare_residual` among them); same class, and none is a column this intent changed |
+| Ossie lint | `python3 tools/ossie_lint.py` | 0 | pass — 0 blocking findings |
+| Ontology report | not run | - | not required: the intent touched no `ontology/` file and no Ossie document or mapping references `finance.mart_revenue_component_bridge` |
+| Python tests | `python3 -m pytest tests -q` | 0 | pass — 222 passed |
+| Python lint | `ruff check .` | 0 | pass — All checks passed |
+| SQL lint | `sqlfluff lint transformation/models` | 0 | pass — All Finished |
+| ADR lint | `python3 .github/scripts/adr_lint.py` | 0 | pass — no duplicate numbers, no dangling references |
+| Weakening: dbt test declarations | `python3 scripts/diff_data_tests.py <_finance.yml at 1184020> <at d13c51e>` | 0 | pass — `weaker: []`, `ambiguous: []`; the intent added one singular test and modified no existing one |
+| Weakening: enforced contracts | `python3 scripts/diff_manifest_contract.py <manifest at 1184020> <manifest at d13c51e>` | 0 | pass — `weaker: []`, `stronger: []` |
+| Weakening: dlt schema contracts | not run | - | not required: the intent changed no pipeline under `ingestion/` |
+| Docs publication | `cd transformation && dbt docs generate --static --target dev` | 0 | pass — catalog written, 87 relations |
 
 ## Discovery
 
@@ -28,3 +71,10 @@
 - Adjacent, not this defect: the monthly service summary is 3,551.07 below billable revenue because its inner join to the payment-method dimension drops 106 billable trips. — `select (select sum(total_revenue) from finance.mart_daily_zone_revenue) as daily_zone_total, (select sum(total_revenue) from finance.mart_monthly_service_summary) as monthly_service_total, (select sum(component_amount) from finance.mart_revenue_component_bridge) as bridge_component_sum` → 2629185.82 / 2625634.75 / 2641448.07
 - The deployed numbers come from the branch's base commit, not a stale build. — `select load_id, pipeline_name, status, started_at, git_sha from bronze.audit_runs order by started_at desc limit 2` (same on `ops_raw`, `mdm_raw`) → `1795505036.578122, tlc, completed, 2026-11-24T07:23:56Z, 1184020d14474dceb6e933849792bff9033070f3`
 - Gap: no dbt or Elementary test history was reachable — `transformation/target/` does not exist in this clone and the database has no Elementary schema — so the run history plane rests on the dlt `audit_runs` pin above.
+
+## Findings reported, not fixed
+
+- **The change classifier disagrees with the case's blast radius on `fct_trip`.** `list_changes` at `d13c51e` calls `model:fct_trip` `documentation_only` ("only descriptions, docs or meta changed") and calls the bridge `additive`, while the case, the Plan's change impact and the data say `core.fct_trip.fare_residual` changed value on 5,412 in-Q1 trips. The classifier fingerprints models and their description blocks but not `transformation/macros/`, so a macro-only value change reads as documentation. Not silently reconciled: the value change is the case's, and it is proven by the `unbalanced` count falling 31,869 → 26,457 and by `fare_residual` moving to −32,638.75 on billable Q1 trips.
+- **The request's adjacent count is not reproducible.** The request states "19,121 billable trips have `total_amount` below the sum of the modelled components"; no artifact in this intent records that number, and the count is 39,867 after the fix (36,860 before, on the deployed database). Other readings of the same sentence give 23,893 / 23,550 / 26,453 / 18,409, none 19,121. Nothing in the fix, the contract or the design records depends on it; the −20,376.50 and −32,638.75 figures the case does state are both reproduced exactly.
+- **24 relationship claims stay unjudged.** Every contract's declared relationships to relations outside its own schema are `profile/unchecked`; the engine never tested them. They are pre-existing and none is on the bridge.
+- **Production needs the same full refresh.** `fct_trip` is incremental by `trip_key` over a closed window, so an incremental run processes no row: the Q1 correction reaches production only through a `--full-refresh` of `fct_trip` (and, per the Plan, of the views that embed its compiled SQL).
