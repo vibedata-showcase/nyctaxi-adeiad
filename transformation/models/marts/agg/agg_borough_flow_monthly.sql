@@ -72,8 +72,10 @@ origin_totals as (
         p.trip_count,
         p.total_revenue,
         p.is_cross_borough,
-        sum(p.located_trip_count) over w as origin_located_trip_count,
-        sum(p.cross_trip_count) over w as origin_cross_borough_trip_count
+        -- cast because a window sum over BIGINT widens to HUGEINT, and the
+        -- published column is a plain count.
+        cast(sum(p.located_trip_count) over w as bigint) as origin_located_trip_count,
+        cast(sum(p.cross_trip_count) over w as bigint) as origin_cross_borough_trip_count
     from placed p
     window w as (partition by p.month_start_date, p.origin_borough)
 )

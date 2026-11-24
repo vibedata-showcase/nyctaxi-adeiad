@@ -3,7 +3,7 @@ kind: DataContract
 id: 3f9c1a44-7d21-4f68-9b0e-2c5a6d84e117
 name: agg_borough_flow_monthly
 version: 1.0.0
-status: proposed
+status: active
 servers:
   - server: sample-nyctaxi-comp
     type: duckdb
@@ -59,4 +59,15 @@ schema:
         physicalType: DOUBLE
         description: "origin_cross_borough_trip_count divided by origin_located_trip_count: the share of the origin borough's located-destination traffic that left the borough. Null when the denominator is zero or the origin is 'unresolved'. Repeats across destination rows and is never to be averaged; roll up by summing the two counts instead."
 description:
-  purpose: Monthly borough-to-borough flow of billable trips, with the share of each origin borough's traffic that ends elsewhere. The borough-grain companion to the zone-pair flow matrix, published without that surface's trip floor.
+  purpose: >
+    Borough-to-borough flow of billable trips, one row per month, origin borough and
+    destination borough, for every pair with at least one billable trip. The companion
+    to agg_od_flow_matrix at borough grain, and unlike that surface it publishes no trip
+    floor (ADR 0018): a pair with a single trip has a row, so summing the rows reproduces
+    the star's billable traffic and revenue exactly. A trip whose pickup or dropoff zone
+    the master data places in no borough is neither in-borough nor cross-borough; it
+    appears under the origin or destination value 'unresolved', counts in trip_count and
+    total_revenue, and is excluded from the share. The share is that origin borough's
+    cross-borough trips over its trips with a located destination (ADR 0019), computed as
+    a ratio of the two sums (ADR 0016) and therefore repeated on every destination row of
+    the borough and month: sum the two counts to roll up, never average the share.

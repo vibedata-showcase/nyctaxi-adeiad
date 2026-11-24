@@ -541,20 +541,8 @@ models:
         data_type: DOUBLE
 
   - name: agg_borough_flow_monthly
-    description: >
-      Borough-to-borough flow of billable trips, one row per month, origin
-      borough and destination borough, for every pair that has at least one
-      billable trip. The companion to agg_od_flow_matrix at borough grain, and
-      unlike that surface it publishes no trip floor (ADR 0018): a pair with a
-      single trip has a row, so summing the rows reproduces the star's billable
-      traffic and revenue exactly. A trip whose pickup or dropoff zone the master
-      data places in no borough is neither in-borough nor cross-borough; it
-      appears under the origin or destination value 'unresolved', counts in
-      trip_count and total_revenue, and is excluded from the share. The share is
-      that origin borough's cross-borough trips over its trips with a located
-      destination (ADR 0019), computed as a ratio of the two sums (ADR 0016) and
-      therefore repeated on every destination row of the borough and month: sum
-      the two counts to roll up, never average the share.
+    description: 'Borough-to-borough flow of billable trips, one row per month, origin borough and destination borough, for every pair with at least one billable trip. The companion to agg_od_flow_matrix at borough grain, and unlike that surface it publishes no trip floor (ADR 0018): a pair with a single trip has a row, so summing the rows reproduces the star''s billable traffic and revenue exactly. A trip whose pickup or dropoff zone the master data places in no borough is neither in-borough nor cross-borough; it appears under the origin or destination value ''unresolved'', counts in trip_count and total_revenue, and is excluded from the share. The share is that origin borough''s cross-borough trips over its trips with a located destination (ADR 0019), computed as a ratio of the two sums (ADR 0016) and therefore repeated on every destination row of the borough and month: sum the two counts to roll up, never average the share.'
+    contract: {enforced: true}
     columns:
       - name: month_start_date
         data_type: DATE
@@ -563,26 +551,27 @@ models:
       - name: origin_borough
         data_type: VARCHAR
         data_tests: [not_null]
-        description: Borough the trip started in, as the zone master data names it; 'unresolved' groups pickup zones it places in no borough.
+        description: Borough the trip started in, as the zone master data names it; the value 'unresolved' groups every pickup zone the master data places in no borough.
       - name: dest_borough
         data_type: VARCHAR
         data_tests: [not_null]
         description: Borough the trip ended in, on the same rule as origin_borough.
       - name: trip_count
         data_type: BIGINT
-        description: Billable trips picked up in the month that ran from the origin borough to the destination borough.
+        description: Billable trips picked up in the month that ran from origin_borough to dest_borough. Every pair with at least one such trip has a row; no pair is suppressed by a trip floor.
+        data_tests: [not_null]
       - name: total_revenue
         data_type: DOUBLE
-        description: Sum of total_amount over the pair's billable trips, including the no-charge and dispute payment methods.
+        description: Sum of the trips' total amount, which includes the no-charge and dispute payment methods because the billable rule reads only the total.
       - name: is_cross_borough
         data_type: BOOLEAN
-        description: True when the trip ended in a borough other than the one it started in; null when either end is unresolved.
+        description: True when the trip ended in a borough other than the one it started in. Null when either end is 'unresolved', since a zone in no borough can be neither the same borough nor a different one.
       - name: origin_located_trip_count
         data_type: BIGINT
-        description: The origin borough's billable trips that ended in a borough, the share's denominator; repeated across the month's destination rows, so not additive. Null on an unresolved origin.
+        description: 'The origin borough''s billable trips for the month whose destination lies in a borough: the denominator of cross_borough_trip_share. Repeats on every destination row of that borough and month, so it is not additive across rows; the non-additive figure is trip_count. Null when origin_borough is ''unresolved''.'
       - name: origin_cross_borough_trip_count
         data_type: BIGINT
-        description: Those of the origin borough's located-destination trips that ended elsewhere, the share's numerator; repeated the same way, so not additive either. Null on an unresolved origin.
+        description: 'Those of the origin borough''s located-destination trips that ended in another borough: the numerator of cross_borough_trip_share. Repeats across destination rows like the denominator, so it is not additive either. Null when origin_borough is ''unresolved''.'
       - name: cross_borough_trip_share
         data_type: DOUBLE
-        description: The numerator divided by the denominator, null when the denominator is zero or the origin is unresolved; repeated across destination rows, so roll up by summing the counts rather than averaging it.
+        description: 'origin_cross_borough_trip_count divided by origin_located_trip_count: the share of the origin borough''s located-destination traffic that left the borough. Null when the denominator is zero or the origin is ''unresolved''. Repeats across destination rows and is never to be averaged; roll up by summing the two counts instead.'
