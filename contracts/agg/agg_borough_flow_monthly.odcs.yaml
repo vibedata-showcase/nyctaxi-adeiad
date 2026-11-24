@@ -3,7 +3,7 @@ kind: DataContract
 id: 3f18107b-9d44-4875-b406-e47e270acaae
 name: agg_borough_flow_monthly
 version: 1.0.0
-status: proposed
+status: active
 servers:
   - server: sample-nyctaxi-comp
     type: duckdb
