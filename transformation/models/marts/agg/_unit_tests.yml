@@ -1,0 +1,146 @@
+version: 2
+
+unit_tests:
+  # --- agg_borough_flow_monthly -----------------------------------------------
+  - name: borough_flow_counts_a_crossing_trip_in_the_numerator
+    description: >
+      A trip from one resolved borough to another is not intra-borough and is
+      counted in the origin borough's numerator, so the share is 1.0 for an
+      origin whose only trip leaves.
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T-1, pickup_zone_key: Z-MANHATTAN, dropoff_zone_key: Z-QUEENS, pickup_date: '2024-01-10', pickup_datetime: '2024-01-10 09:00:00', total_amount: 20.0, is_billable: true}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-MANHATTAN, borough_name: Manhattan, is_unresolved_zone: false}
+          - {zone_key: Z-QUEENS, borough_name: Queens, is_unresolved_zone: false}
+    expect:
+      rows:
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, destination_borough: Queens, origin_is_unresolved: false, destination_is_unresolved: false, is_intra_borough: false, trip_count: 1, billable_revenue: 20.0, cross_borough_billable_trip_count: 1, origin_billable_trip_count: 1, cross_borough_share: 1.0}
+
+  - name: borough_flow_counts_an_intra_trip_in_the_denominator_only
+    description: >
+      A trip that starts and ends in the same borough is intra-borough: it stays
+      in the origin borough's denominator and contributes nothing to the
+      numerator.
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T-1, pickup_zone_key: Z-MANHATTAN, dropoff_zone_key: Z-MANHATTAN2, pickup_date: '2024-01-10', pickup_datetime: '2024-01-10 09:00:00', total_amount: 15.0, is_billable: true}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-MANHATTAN, borough_name: Manhattan, is_unresolved_zone: false}
+          - {zone_key: Z-MANHATTAN2, borough_name: Manhattan, is_unresolved_zone: false}
+    expect:
+      rows:
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, destination_borough: Manhattan, is_intra_borough: true, trip_count: 1, cross_borough_billable_trip_count: 0, origin_billable_trip_count: 1, cross_borough_share: 0.0}
+
+  - name: borough_flow_keeps_a_resolved_origin_with_an_unresolved_destination_in_the_denominator
+    description: >
+      A trip from a real borough into an unresolved zone is that borough's
+      traffic, so it stays in the denominator, but it did not arrive in another
+      borough, so it is not in the numerator (ADR 0020).
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T-1, pickup_zone_key: Z-QUEENS, dropoff_zone_key: Z-UNKNOWN, pickup_date: '2024-01-10', pickup_datetime: '2024-01-10 09:00:00', total_amount: 30.0, is_billable: true}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-QUEENS, borough_name: Queens, is_unresolved_zone: false}
+          - {zone_key: Z-UNKNOWN, borough_name: Unknown, is_unresolved_zone: true}
+    expect:
+      rows:
+        - {month_start_date: '2024-01-01', origin_borough: Queens, destination_borough: Unknown, origin_is_unresolved: false, destination_is_unresolved: true, is_intra_borough: false, trip_count: 1, cross_borough_billable_trip_count: 0, origin_billable_trip_count: 1, cross_borough_share: 0.0}
+
+  - name: borough_flow_leaves_an_unresolved_origin_outside_the_share
+    description: >
+      A trip picked up in an unresolved zone is kept in the totals but has no
+      numerator, no denominator and a null share, because Unknown and N/A are not
+      boroughs (ADR 0020).
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T-1, pickup_zone_key: Z-NA, dropoff_zone_key: Z-MANHATTAN, pickup_date: '2024-01-10', pickup_datetime: '2024-01-10 09:00:00', total_amount: 12.0, is_billable: true}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-NA, borough_name: N/A, is_unresolved_zone: true}
+          - {zone_key: Z-MANHATTAN, borough_name: Manhattan, is_unresolved_zone: false}
+    expect:
+      rows:
+        - {month_start_date: '2024-01-01', origin_borough: N/A, destination_borough: Manhattan, origin_is_unresolved: true, trip_count: 1, cross_borough_billable_trip_count: null, origin_billable_trip_count: null, cross_borough_share: null}
+
+  - name: borough_flow_keeps_a_trip_with_no_matching_dropoff_zone
+    description: >
+      A dropoff zone key that matches no zone leaves the destination borough null
+      and marks it unresolved, but the trip is kept and still counted in the
+      origin borough's denominator (ADR 0015).
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T-1, pickup_zone_key: Z-BRONX, dropoff_zone_key: Z-MISSING, pickup_date: '2024-01-10', pickup_datetime: '2024-01-10 09:00:00', total_amount: 18.0, is_billable: true}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-BRONX, borough_name: Bronx, is_unresolved_zone: false}
+    expect:
+      rows:
+        - {month_start_date: '2024-01-01', origin_borough: Bronx, destination_borough: null, origin_is_unresolved: false, destination_is_unresolved: true, is_intra_borough: false, trip_count: 1, cross_borough_billable_trip_count: 0, origin_billable_trip_count: 1, cross_borough_share: 0.0}
+
+  - name: borough_flow_computes_the_share_in_the_crossing_month
+    description: >
+      With only January in the fixture, the origin borough's share is built from
+      that month's trips: the one trip crossed, so the share is 1.0. A model that
+      partitioned the window instead of the month would read the same here, which
+      is why the intra-month test below exists as its counterpart.
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T-1, pickup_zone_key: Z-BROOKLYN, dropoff_zone_key: Z-QUEENS, pickup_date: '2024-01-10', pickup_datetime: '2024-01-10 09:00:00', total_amount: 20.0, is_billable: true}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-BROOKLYN, borough_name: Brooklyn, is_unresolved_zone: false}
+          - {zone_key: Z-QUEENS, borough_name: Queens, is_unresolved_zone: false}
+    expect:
+      rows:
+        - {month_start_date: '2024-01-01', origin_borough: Brooklyn, destination_borough: Queens, trip_count: 1, cross_borough_billable_trip_count: 1, origin_billable_trip_count: 1, cross_borough_share: 1.0}
+
+  - name: borough_flow_computes_the_share_in_the_intra_month
+    description: >
+      With only February in the fixture, the origin borough's share is built from
+      that month's trips: the one trip stayed inside Brooklyn, so the share is
+      0.0 and the numerator is zero rather than null.
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T-2, pickup_zone_key: Z-BROOKLYN, dropoff_zone_key: Z-BROOKLYN2, pickup_date: '2024-02-10', pickup_datetime: '2024-02-10 09:00:00', total_amount: 25.0, is_billable: true}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-BROOKLYN, borough_name: Brooklyn, is_unresolved_zone: false}
+          - {zone_key: Z-BROOKLYN2, borough_name: Brooklyn, is_unresolved_zone: false}
+    expect:
+      rows:
+        - {month_start_date: '2024-02-01', origin_borough: Brooklyn, destination_borough: Brooklyn, is_intra_borough: true, trip_count: 1, cross_borough_billable_trip_count: 0, origin_billable_trip_count: 1, cross_borough_share: 0.0}
+
+  - name: borough_flow_excludes_a_non_billable_trip
+    description: >
+      The billable rule (ADR 0003) is applied here: a non-billable trip adds
+      nothing to the pair's trips or revenue, so a borough pair whose only trip is
+      non-billable has no row at all.
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T-1, pickup_zone_key: Z-BRONX, dropoff_zone_key: Z-QUEENS, pickup_date: '2024-01-10', pickup_datetime: '2024-01-10 09:00:00', total_amount: -5.0, is_billable: false}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-BRONX, borough_name: Bronx, is_unresolved_zone: false}
+          - {zone_key: Z-QUEENS, borough_name: Queens, is_unresolved_zone: false}
+    expect:
+      rows: []

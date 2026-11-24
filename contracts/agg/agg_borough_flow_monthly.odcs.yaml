@@ -1,0 +1,59 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: 3c1f9e42-7d05-4a86-9b1e-2f4c8d0a6b57
+name: agg_borough_flow_monthly
+version: 1.0.0
+status: proposed
+servers:
+  - server: sample-nyctaxi-comp
+    type: duckdb
+    database: domain.duckdb
+    schema: agg
+schema:
+  - name: agg_borough_flow_monthly
+    dataGranularityDescription: One row per month, origin borough and destination borough, for billable trips inside the reporting window. No trip floor applies (ADR 0018).
+    properties:
+      - name: month_start_date
+        description: First day of the month the trips were picked up in.
+        logicalType: date
+        physicalType: DATE
+      - name: origin_borough
+        description: Borough of the pickup zone. Unknown and N/A are the unresolved group, not boroughs (ADR 0012).
+        logicalType: string
+        physicalType: VARCHAR
+      - name: destination_borough
+        description: Borough of the dropoff zone. Unknown and N/A are the unresolved group, not boroughs (ADR 0012).
+        logicalType: string
+        physicalType: VARCHAR
+      - name: origin_is_unresolved
+        description: True when no borough can be assigned to the pickup zone, so this row sits outside the cross-borough share (ADR 0020).
+        logicalType: boolean
+        physicalType: BOOLEAN
+      - name: destination_is_unresolved
+        description: True when no borough can be assigned to the dropoff zone (ADR 0012).
+        logicalType: boolean
+        physicalType: BOOLEAN
+      - name: is_intra_borough
+        description: True when the trip started and ended in the same borough.
+        logicalType: boolean
+        physicalType: BOOLEAN
+      - name: trip_count
+        description: Billable trips on this borough pair in this month.
+        logicalType: integer
+        physicalType: BIGINT
+      - name: billable_revenue
+        description: Sum of total_amount over the billable trips on this borough pair in this month, including no-charge and dispute payments (ADR 0013). Month sums equal the star's billable revenue exactly.
+        logicalType: number
+        physicalType: DOUBLE
+      - name: cross_borough_billable_trip_count
+        description: Numerator of the cross-borough share - the trips of the origin borough and month that ended in a different resolved borough. Null when the origin borough is unresolved (ADR 0020).
+        logicalType: integer
+        physicalType: BIGINT
+      - name: origin_billable_trip_count
+        description: Denominator of the cross-borough share - every billable trip picked up in the origin borough that month, including those set down in an unresolved zone. Null when the origin borough is unresolved (ADR 0020).
+        logicalType: integer
+        physicalType: BIGINT
+      - name: cross_borough_share
+        description: Numerator over denominator, null on an unresolved origin (ADR 0019, ADR 0020). Not additive across boroughs, and rebuilt from its two inputs rather than averaged (ADR 0016).
+        logicalType: number
+        physicalType: DOUBLE

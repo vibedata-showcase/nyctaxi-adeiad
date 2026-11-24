@@ -539,3 +539,76 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+  - name: agg_borough_flow_monthly
+    description: >
+      Borough-to-borough flow, one row per month and borough pair, for billable
+      trips inside the reporting window. Coarser than agg_od_flow_matrix and
+      unlike it published with no trip floor (ADR 0018): a share of a borough's
+      traffic needs every trip in its denominator. Unknown and N/A are the
+      unresolved group rather than boroughs, so their rows are published but sit
+      outside the cross-borough share while staying in the totals (ADR 0020).
+      The share is per origin borough and not additive across boroughs (ADR 0019).
+    access: public
+    contract: {enforced: true}
+    columns:
+      - name: month_start_date
+        data_type: DATE
+        data_tests: [not_null]
+        description: First day of the month the trips were picked up in.
+      - name: origin_borough
+        data_type: VARCHAR
+        description: >
+          Borough of the pickup zone. Unknown and N/A are the unresolved group a
+          zone keeps when no borough can be assigned to it (ADR 0012), not
+          boroughs. Null when the trip's pickup zone key matched no zone (ADR
+          0015): the trip is kept and grouped under the null borough, and
+          origin_is_unresolved marks it.
+      - name: destination_borough
+        data_type: VARCHAR
+        description: >
+          Borough of the dropoff zone. Unknown and N/A are the unresolved group
+          (ADR 0012), not boroughs. Null when the dropoff zone key matched no
+          zone (ADR 0015), marked by destination_is_unresolved.
+      - name: origin_is_unresolved
+        data_type: BOOLEAN
+        data_tests: [not_null]
+        description: >
+          True when no borough can be assigned to the pickup zone, so this row
+          sits outside the cross-borough share (ADR 0020).
+      - name: destination_is_unresolved
+        data_type: BOOLEAN
+        data_tests: [not_null]
+        description: True when no borough can be assigned to the dropoff zone (ADR 0012).
+      - name: is_intra_borough
+        data_type: BOOLEAN
+        data_tests: [not_null]
+        description: True when the trip started and ended in the same borough.
+      - name: trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: Billable trips on this borough pair in this month.
+      - name: billable_revenue
+        data_type: DOUBLE
+        data_tests: [not_null]
+        description: >
+          Sum of total_amount over the billable trips on this borough pair in
+          this month, including no-charge and dispute payments (ADR 0013). The
+          month sums equal the star's billable revenue exactly.
+      - name: cross_borough_billable_trip_count
+        data_type: BIGINT
+        description: >
+          Numerator of the cross-borough share: the trips of the origin borough
+          and month that ended in a different resolved borough. Null when the
+          origin borough is unresolved (ADR 0020).
+      - name: origin_billable_trip_count
+        data_type: BIGINT
+        description: >
+          Denominator of the cross-borough share: every billable trip picked up
+          in the origin borough that month, including those set down in an
+          unresolved zone. Null when the origin borough is unresolved (ADR 0020).
+      - name: cross_borough_share
+        data_type: DOUBLE
+        description: >
+          Numerator over denominator, null on an unresolved origin (ADR 0019,
+          ADR 0020). Not additive across boroughs, and rebuilt from its two inputs
+          rather than averaged (ADR 0016).
