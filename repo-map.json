@@ -137,6 +137,10 @@
   },
   "semantic_exclusions": [
     {
+      "relation": "agg.agg_borough_flow_monthly",
+      "reason": "Publishes the merged Unresolved group for zones the TLC cannot place in a borough (ADR 0018). That value is no member of the zone dimension's borough level, so no aggregate source could name this relation's population against the detail without misstating it."
+    },
+    {
       "relation": "agg.agg_od_flow_matrix",
       "reason": "Not a star member: a HAVING floor keeps only well-populated origin-destination pairs (ADR 0017), so it is a filtered population, not the full set of trips; a model over it would mislead."
     },

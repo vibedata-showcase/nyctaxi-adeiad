@@ -24,3 +24,7 @@ Source: the Mobility Planning Lead's answer to the requirement for a monthly bor
 - A rollup that publishes the unresolved group therefore publishes trips its shares do not cover, and has to say so on the relation.
 - `EWR` remains a distinct origin and destination, so a trip between Queens and `EWR` is a crossing; a trip between two zones the TLC cannot place is not.
 - Any future borough rollup that counts crossings inherits this definition rather than deciding it again.
+
+## Affected designs
+
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
