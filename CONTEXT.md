@@ -19,6 +19,10 @@ A TLC taxi zone: the area a trip starts or ends in. Zones belong to a borough.
 **Zone version**:
 TLC re-designates zones, so a zone can have more than one version. The current version is the one in force now; a trip uses the version in force on its pickup date.
 
+**Borough**:
+The area a zone belongs to, as the master data names it: the New York City boroughs, and Newark Airport as its own borough value. A zone the master data cannot place belongs to no borough.
+_Not_: reporting region, because a region groups boroughs and says where a zone is, not which borough owns it.
+
 **Unresolved zone**:
 A zone the TLC lists but cannot place in a borough. It is a real zone, so it joins like any other, and it pollutes a borough rollup unless the consumer filters it.
 
@@ -75,6 +79,14 @@ The trips between one pickup zone and one dropoff zone.
 
 **Published flow**:
 An origin-destination pair with at least 25 billable trips in the reporting window, the population the origin-destination matrix reports (ADR 0017). Narrower than a flow: a pair below the floor exists in the trips but is not published.
+
+**Borough flow**:
+The billable trips from one borough to another in a month, and their revenue, reported for every pair that has at least one trip. No floor narrows it (ADR 0018).
+_Not_: published flow, because that is a zone pair above the floor, and a borough flow is an aggregate over every zone pair between the two boroughs.
+
+**Cross-borough trip**:
+A trip whose pickup borough and dropoff borough are different, the population a share of trips that leave their origin borough counts. A trip to or from Newark Airport crosses, because it is a borough; a trip whose pickup or dropoff zone is unresolved is neither cross-borough nor in-borough.
+_Not_: outbound trip, because a trip between two other boroughs that never touched this one is cross-borough too.
 
 **Medallion**:
 The licence to operate a taxi. It is transferable: the licence outlives the vehicle it currently covers and the driver who currently holds it, so it is neither of them.
