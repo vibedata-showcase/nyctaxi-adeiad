@@ -95,7 +95,8 @@
         "transformation/tests/assert_borough_flow_reconciles_to_fct_trip.sql",
         "transformation/tests/assert_borough_flow_share_matches_its_counts.sql",
         "transformation/tests/assert_borough_flow_unresolved_cells_carry_no_share.sql",
-        "transformation/tests/assert_borough_flow_flags_match_dim_zone.sql"
+        "transformation/tests/assert_borough_flow_flags_match_dim_zone.sql",
+        "transformation/tests/assert_borough_flow_unresolved_origin_basis.sql"
       ],
       "selectors": {
         "data": "path:models/marts/agg",

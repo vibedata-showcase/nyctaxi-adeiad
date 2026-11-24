@@ -592,11 +592,11 @@ models:
       - name: resolved_trip_count
         data_type: BIGINT
         data_tests: [not_null]
-        description: The origin's trips in the month whose destination resolves to a borough, the denominator of cross_borough_share_pct. An origin-month value repeated on every row of that origin, never summed across rows.
+        description: The origin's trips in the month whose destination resolves to a borough, the denominator of cross_borough_share_pct. Computed for every origin, the unresolved ones included, where it is the basis published beside the null share (ADR 0019, D-11). An origin-month value repeated on every row of that origin, never summed across rows.
       - name: cross_borough_trip_count
         data_type: BIGINT
         data_tests: [not_null]
-        description: The origin's trips in the month that ended in a different borough, the numerator of cross_borough_share_pct. An origin-month value repeated on every row of that origin, never summed across rows.
+        description: The origin's trips in the month that ended in a different borough, the numerator of cross_borough_share_pct. Zero on an unresolved origin, because a trip from N/A or Unknown cannot leave a borough (ADR 0019, D-11). An origin-month value repeated on every row of that origin, never summed across rows.
       - name: cross_borough_share_pct
         data_type: DOUBLE
-        description: Percentage of the origin's resolved-destination trips that ended in another borough, rebuilt from the two counts beside it (ADR 0016). Null on every row whose origin or destination is unresolved, where no borough-to-borough rate exists; the two counts show the basis.
+        description: Percentage of the origin's resolved-destination trips that ended in another borough, rebuilt from the two counts beside it (ADR 0016). Null on every row whose origin or destination is unresolved, where no borough-to-borough rate exists; on an unresolved origin the two counts still show its real basis.

@@ -48,14 +48,15 @@ origin_month as (
         cast(date_trunc('month', f.pickup_datetime) as date) as month_start_date,
         o.borough_name as origin_borough,
         count(*) as resolved_trip_count,
-        count(*) filter (where o.borough_name != dz.borough_name) as cross_borough_trip_count
+        count(*) filter (
+            where not o.is_unresolved_zone and o.borough_name != dz.borough_name
+        ) as cross_borough_trip_count
     from {{ ref('fct_trip') }} f
     join {{ ref('dim_zone') }} o on f.pickup_zone_key = o.zone_key
     join {{ ref('dim_zone') }} dz on f.dropoff_zone_key = dz.zone_key
     where
         {{ in_report_window('f.pickup_datetime') }}
         and f.is_billable
-        and not o.is_unresolved_zone
         and not dz.is_unresolved_zone
     group by 1, 2
 )
