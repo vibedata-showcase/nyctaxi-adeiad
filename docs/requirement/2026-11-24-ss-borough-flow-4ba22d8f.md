@@ -63,3 +63,4 @@ None.
 - 2026-11-24T16:19:31Z — requirement approved — "Approve, but stop here" — 4e52c16
 - 2026-11-24T16:39:01Z — design approved — "Please write the design records and the Plan. Stop when the Plan is written. Do not start the build yet." — 21e6c93
 - 2026-11-24T16:53:30Z — design approved — "Unknown and N/A are not boroughs (ADR 0012). Keep their trips in their own unresolved group, outside the share, and keep them in the totals. EWR is a borough: keep its trips. The totals must equal billable revenue. Also show where ADR 0016 and ADR 0004 apply. [+ widen: ADR 0019 supersedes 0016]" — f7dbd7d
+- 2026-11-24T17:19:15Z — ship approved — "approved" — a333072
