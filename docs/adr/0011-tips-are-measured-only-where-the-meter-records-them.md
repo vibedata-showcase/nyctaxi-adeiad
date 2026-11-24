@@ -21,3 +21,4 @@ The measurable tip rate is the tip as a share of the fare, and it exists only fo
 ## Affected designs
 
 - [`models/core/fct_trip.md`](../design/models/core/fct_trip.md)
+- [`models/intermediate/int_trip_fare_components.md`](../design/models/intermediate/int_trip_fare_components.md)

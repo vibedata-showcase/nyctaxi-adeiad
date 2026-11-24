@@ -29,7 +29,12 @@ The provider that supplies a taxi's meter and sends its trip records. Vendors ar
 One part of a trip's total: the fare itself, tip, tolls, taxes and surcharges.
 
 **Fare residual**:
-What is left of a trip's total after every modelled fare component. A non-zero residual means the total is not the sum of its parts.
+What is left of a trip's total after every fare component the warehouse models, the airport fee included. A non-zero residual means the total is not the sum of its parts.
+_Not_: the airport fee, because the fee is a component in its own right and a residual that still held it would count it twice.
+
+**Revenue walk**:
+A trip total split into its fare components, published one component per row. Its components are disjoint parts of one total: summed over a group of trips they equal that group's total, and over the reporting window they equal billable revenue (ADR 0018).
+_Not_: a set of related revenue lines that happen to be reported together, because then a component counted in two rows would read as extra revenue rather than as a decomposition that has gone wrong.
 
 **Billable trip**:
 A trip whose total is positive. Revenue and flow reporting counts only billable trips inside the reporting window; quality reporting counts all trips and shows how many are billable.
