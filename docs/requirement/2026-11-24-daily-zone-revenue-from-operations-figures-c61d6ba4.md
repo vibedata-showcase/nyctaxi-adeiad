@@ -90,3 +90,4 @@ None.
 
 - 2026-11-24T03:27:10Z — requirement approved — "approve and continue to design" — 05d1c09
 - 2026-11-24T03:48:07Z — design approved — "approve and continue to planning" — f37bc56
+- 2026-11-24T05:03:31Z — ship approved — "approved" — 52fb5b1
