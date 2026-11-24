@@ -1,0 +1,84 @@
+version: 2
+
+unit_tests:
+  # --- agg_borough_flow_monthly: the share's base, the unresolved group, EWR --
+  - name: borough_flow_splits_cross_from_in_borough
+    description: One origin borough with an in-borough trip, a cross-borough trip and a trip to an unresolved destination. The share counts the located pair only, so a trip to an unplaced zone neither leaves nor stays.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: t1, pickup_datetime: '2024-01-10 08:00:00', pickup_date: '2024-01-10', pickup_zone_key: z_man_1, dropoff_zone_key: z_man_2, is_billable: true, total_amount: 10.0}
+          - {trip_key: t2, pickup_datetime: '2024-01-11 09:00:00', pickup_date: '2024-01-11', pickup_zone_key: z_man_1, dropoff_zone_key: z_bkn_1, is_billable: true, total_amount: 20.0}
+          - {trip_key: t3, pickup_datetime: '2024-01-12 10:00:00', pickup_date: '2024-01-12', pickup_zone_key: z_man_1, dropoff_zone_key: z_unk, is_billable: true, total_amount: 30.0}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: z_man_1, borough_name: Manhattan, is_unresolved_zone: false}
+          - {zone_key: z_man_2, borough_name: Manhattan, is_unresolved_zone: false}
+          - {zone_key: z_bkn_1, borough_name: Brooklyn, is_unresolved_zone: false}
+          - {zone_key: z_unk, borough_name: Unknown, is_unresolved_zone: true}
+    expect:
+      rows:
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, trip_count: 1, total_revenue: 10.0, is_cross_borough: false, origin_located_trip_count: 2, origin_cross_borough_trip_count: 1, cross_borough_trip_share: 0.5}
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, dest_borough: Brooklyn, trip_count: 1, total_revenue: 20.0, is_cross_borough: true, origin_located_trip_count: 2, origin_cross_borough_trip_count: 1, cross_borough_trip_share: 0.5}
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, dest_borough: unresolved, trip_count: 1, total_revenue: 30.0, is_cross_borough: null, origin_located_trip_count: 2, origin_cross_borough_trip_count: 1, cross_borough_trip_share: 0.5}
+
+  - name: borough_flow_puts_an_unresolved_origin_in_its_own_group
+    description: A pickup zone whose borough the master data cannot place groups as 'unresolved', with a null verdict and a null share, and its trip still counts.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: t1, pickup_datetime: '2024-02-05 07:00:00', pickup_date: '2024-02-05', pickup_zone_key: z_na, dropoff_zone_key: z_bx, is_billable: true, total_amount: 15.0}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: z_na, borough_name: N/A, is_unresolved_zone: true}
+          - {zone_key: z_bx, borough_name: Bronx, is_unresolved_zone: false}
+    expect:
+      rows:
+        - {month_start_date: '2024-02-01', origin_borough: unresolved, dest_borough: Bronx, trip_count: 1, total_revenue: 15.0, is_cross_borough: null, origin_located_trip_count: null, origin_cross_borough_trip_count: null, cross_borough_trip_share: null}
+
+  - name: borough_flow_treats_a_null_zone_key_as_unresolved
+    description: A fact row whose pickup zone key matches no dimension row keeps its trip (ADR 0015) and groups as 'unresolved' rather than disappearing through the join.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: t1, pickup_datetime: '2024-03-02 12:00:00', pickup_date: '2024-03-02', pickup_zone_key: z_missing, dropoff_zone_key: z_qn, is_billable: true, total_amount: 25.0}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: z_qn, borough_name: Queens, is_unresolved_zone: false}
+    expect:
+      rows:
+        - {month_start_date: '2024-03-01', origin_borough: unresolved, dest_borough: Queens, trip_count: 1, total_revenue: 25.0, is_cross_borough: null, origin_located_trip_count: null, origin_cross_borough_trip_count: null, cross_borough_trip_share: null}
+
+  - name: borough_flow_treats_an_airport_borough_as_a_crossing
+    description: Newark Airport is a borough value the master data carries, so a Manhattan trip that ends there leaves Manhattan and enters the share.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: t1, pickup_datetime: '2024-01-20 17:00:00', pickup_date: '2024-01-20', pickup_zone_key: z_man_1, dropoff_zone_key: z_ewr, is_billable: true, total_amount: 70.0}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: z_man_1, borough_name: Manhattan, is_unresolved_zone: false}
+          - {zone_key: z_ewr, borough_name: EWR, is_unresolved_zone: false}
+    expect:
+      rows:
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, dest_borough: EWR, trip_count: 1, total_revenue: 70.0, is_cross_borough: true, origin_located_trip_count: 1, origin_cross_borough_trip_count: 1, cross_borough_trip_share: 1.0}

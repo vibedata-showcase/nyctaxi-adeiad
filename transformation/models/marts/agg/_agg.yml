@@ -539,3 +539,50 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+
+  - name: agg_borough_flow_monthly
+    description: >
+      Borough-to-borough flow of billable trips, one row per month, origin
+      borough and destination borough, for every pair that has at least one
+      billable trip. The companion to agg_od_flow_matrix at borough grain, and
+      unlike that surface it publishes no trip floor (ADR 0018): a pair with a
+      single trip has a row, so summing the rows reproduces the star's billable
+      traffic and revenue exactly. A trip whose pickup or dropoff zone the master
+      data places in no borough is neither in-borough nor cross-borough; it
+      appears under the origin or destination value 'unresolved', counts in
+      trip_count and total_revenue, and is excluded from the share. The share is
+      that origin borough's cross-borough trips over its trips with a located
+      destination (ADR 0019), computed as a ratio of the two sums (ADR 0016) and
+      therefore repeated on every destination row of the borough and month: sum
+      the two counts to roll up, never average the share.
+    columns:
+      - name: month_start_date
+        data_type: DATE
+        data_tests: [not_null]
+        description: First day of the month the trips were picked up in.
+      - name: origin_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough the trip started in, as the zone master data names it; 'unresolved' groups pickup zones it places in no borough.
+      - name: dest_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough the trip ended in, on the same rule as origin_borough.
+      - name: trip_count
+        data_type: BIGINT
+        description: Billable trips picked up in the month that ran from the origin borough to the destination borough.
+      - name: total_revenue
+        data_type: DOUBLE
+        description: Sum of total_amount over the pair's billable trips, including the no-charge and dispute payment methods.
+      - name: is_cross_borough
+        data_type: BOOLEAN
+        description: True when the trip ended in a borough other than the one it started in; null when either end is unresolved.
+      - name: origin_located_trip_count
+        data_type: BIGINT
+        description: The origin borough's billable trips that ended in a borough, the share's denominator; repeated across the month's destination rows, so not additive. Null on an unresolved origin.
+      - name: origin_cross_borough_trip_count
+        data_type: BIGINT
+        description: Those of the origin borough's located-destination trips that ended elsewhere, the share's numerator; repeated the same way, so not additive either. Null on an unresolved origin.
+      - name: cross_borough_trip_share
+        data_type: DOUBLE
+        description: The numerator divided by the denominator, null when the denominator is zero or the origin is unresolved; repeated across destination rows, so roll up by summing the counts rather than averaging it.
