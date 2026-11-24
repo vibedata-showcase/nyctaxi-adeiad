@@ -24,7 +24,7 @@ A trip picked up in a real borough and set down in an unresolved zone stays in t
 - The share is not additive across origin boroughs: a borough's share applies to that borough, and summing the column means nothing.
 - Unresolved rows carry a null share, so a consumer averaging the column must decide whether to include them; the published numerator and denominator let it exclude or rebuild as it needs.
 - A reader who wants the network figure aggregates the mart's trips and crossing trips themselves, and gets a different, clearly-labelled number.
-- The share's denominator is the sum of the origin borough's own `trip_count` cells, so it can never disagree with the trips published beside it; only the numerator narrows, by the unresolved-destination cells.
+- The share's denominator is the sum of the origin borough's own `billable_trip_count` cells, so it can never disagree with the trips published beside it; only the numerator narrows, by the unresolved-destination cells.
 - A change to how boroughs are assigned changes this measure, and it is a decision to record rather than a filter to add quietly.
 
 ## Affected designs
