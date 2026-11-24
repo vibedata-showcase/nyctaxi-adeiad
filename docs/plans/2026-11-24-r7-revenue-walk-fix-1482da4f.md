@@ -41,10 +41,10 @@
 
 **Requirements:** `C-03` · **Design:** `docs/design/models/finance/mart_revenue_component_bridge.md` `D-01`, `D-02` · **Skill:** `generating-dbt-model` · **Depends on:** none
 
-- [ ] Create `transformation/tests/assert_revenue_walk_balances.sql`: group `finance.mart_revenue_component_bridge` by `trip_month, service_type_key, borough_name`, and return each group where `abs(sum(component_amount) - max(total_amount)) > 0.01`, with the group's `count(*)`, `sum(component_amount)` and `max(total_amount)` as the evidence columns. Comment why: the residual and the walk share one component list, and a component published on its own line but not subtracted in the residual makes the walk overshoot.
-- [ ] Add `"data": ["transformation/tests/assert_revenue_walk_balances.sql"]` to the `finance` module of `test-map.json`, so the map keeps naming the tests that protect each layer.
-- [ ] Run `cd transformation && dbt deps`, then `cd transformation && dbt build --select mart_revenue_component_bridge` and `cd transformation && dbt test --select assert_revenue_walk_balances`; expect the test to **fail with 9 rows**, and record the row count and the summed gap (`12,262.25`).
-- [ ] Commit and push both files.
+- [x] Create `transformation/tests/assert_revenue_walk_balances.sql`: group `finance.mart_revenue_component_bridge` by `trip_month, service_type_key, borough_name`, and return each group where `abs(sum(component_amount) - max(total_amount)) > 0.01`, with the group's `count(*)`, `sum(component_amount)` and `max(total_amount)` as the evidence columns. Comment why: the residual and the walk share one component list, and a component published on its own line but not subtracted in the residual makes the walk overshoot.
+- [x] Add `"data": ["transformation/tests/assert_revenue_walk_balances.sql"]` to the `finance` module of `test-map.json`, so the map keeps naming the tests that protect each layer.
+- [x] Run `cd transformation && dbt deps`, then `cd transformation && dbt build --select mart_revenue_component_bridge` and `cd transformation && dbt test --select assert_revenue_walk_balances`; expect the test to **fail with 9 rows**, and record the row count and the summed gap (`12,262.25`).
+- [x] Commit and push both files.
 
 ### Task 2: subtract the airport fee in the residual, and rebuild the fact
 
@@ -78,3 +78,13 @@
 - [ ] Commit and push the contract together with any file `generate` rewrote.
 
 ## Execution evidence
+
+- Task 1: `cd transformation && dbt deps` — exit 0 — `dbt_packages/` installed (`dbt_project_evaluator` 1.4.1)
+- Task 1: `cd transformation && dbt compile --select assert_revenue_walk_balances --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` — exit 0 — resolves `"finance"."mart_revenue_component_bridge"`, no catalog named
+- Task 1: `cd transformation && dbt build --select mart_revenue_component_bridge --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` — exit 0, `PASS=2 WARN=0 ERROR=1 SKIP=0 NO-OP=0 REUSED=0 TOTAL=3` — the 1 error is the intended pre-fix failure: `assert_revenue_walk_balances ... [FAIL 9]`, `Got 9 results, configured to fail if != 0`
+- Task 1: `python /data/default-plugins/vibedata-data-engineering/0.148.26/scripts/assert_dbt_destination.py` — exit 0 — `DESTINATION_OK: 1 built relation(s) landed in the sandbox ephm_nyc-taxi-duckdb-100k_r7-revenue-walk-fix-1482da4f`
+- Task 1: `python /data/default-plugins/vibedata-data-engineering/0.148.26/scripts/ephemeral_workspace_marker.py init` — exit 0 — `{"status": "created"}`
+- Task 1: pre-fix failing rows, sandbox probe — `select count(*) as failing_groups, round(sum(component_sum - total_amount), 2) as total_gap from (select trip_month, service_type_key, borough_name, sum(component_amount) as component_sum, max(total_amount) as total_amount from finance.mart_revenue_component_bridge group by 1,2,3 having abs(sum(component_amount) - max(total_amount)) > 0.01)` → `9 | 12262.25`
+- Task 1: profiling verdict — `finance.mart_revenue_component_bridge` `Ready`, read in the Verification's `## Discovery` (44 groups, 9 out of balance by `12,262.25` pre-fix)
+- Task 1: `transformation/tests/assert_revenue_walk_balances.sql` — sha256:7912a7b2df6bcb0bfbe17bd468ad85b23c5759954172cb3a0d36f33a286f098d
+- Task 1: `test-map.json` — sha256:245dc6ddeed34c16a77b1083cbf494ced29c713d864d228126afe9c5ab66c7e5
