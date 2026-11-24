@@ -76,6 +76,16 @@ The trips between one pickup zone and one dropoff zone.
 **Published flow**:
 An origin-destination pair with at least 25 billable trips in the reporting window, the population the origin-destination matrix reports (ADR 0017). Narrower than a flow: a pair below the floor exists in the trips but is not published.
 
+**Borough crossing**:
+A trip whose pickup and dropoff zones resolve to two different boroughs the TLC names. `EWR` is one of them; a trip that touches an unresolved zone is neither a crossing nor in-borough (ADR 0018).
+_Not_: every trip between two different borough values, because two of those values are the absence of a borough.
+
+**Unresolved group**:
+The single group that zones the TLC cannot place in a borough report as, merging `Unknown` and `N/A`. It is published as a destination and an origin so its trips stay visible, and it stands outside the borough counts.
+
+**Leaving-borough share**:
+The share of a borough's trips, in a period, that end in a different borough. Its denominator is the borough's trips that resolved to a named borough at both ends, so the unresolved group is outside both the numerator and the denominator.
+
 **Medallion**:
 The licence to operate a taxi. It is transferable: the licence outlives the vehicle it currently covers and the driver who currently holds it, so it is neither of them.
 _Not_: the bronze, silver and gold layering, which is a platform term defined elsewhere.
