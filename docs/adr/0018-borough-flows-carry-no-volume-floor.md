@@ -20,7 +20,7 @@ The rejection is deliberate and recorded, because the same word ("a published fl
 ## Consequences
 
 - `sum(trip_count)` over the whole table equals the billable trips in the reporting window, so the table can be reconciled against `fct_trip` directly.
-- Summing a single origin's rows reproduces that borough's trips, and its off-diagonal rows reproduce the cross-borough denominator.
+- Summing a single origin's rows reproduces that borough's trips. For the share, an origin's resolved diagonal plus its off-diagonal resolved cells reproduce the denominator, and on a resolved origin the off-diagonal resolved cells alone are the numerator, so the rate is reconstructable from the published rows. An unresolved origin has no resolved diagonal, so its off-diagonal resolved cells equal its denominator while its numerator stays zero (ADR 0019).
 - A consumer wanting the "which corridors exist" question still reads `agg_od_flow_matrix` under ADR 0017; the two surfaces answer different questions and are not interchangeable.
 - A new mart that publishes flows must state which of the two populations it publishes.
 
