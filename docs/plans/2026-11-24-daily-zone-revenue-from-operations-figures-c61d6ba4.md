@@ -53,11 +53,11 @@
 
 **Requirements:** `R-05`, `R-06` · **Design:** `docs/design/models/agg/agg_trip_zone_daily.md` · **Skill:** `generating-dbt-model` · **Depends on:** Task 1
 
-- [ ] Author `transformation/tests/assert_zone_day_billable_ties_to_fact.sql`: a `union all` of two checks that each return the offending rows — (a) per `(pickup_date, pickup_location_id)` the agg's `billable_trip_count` and `billable_revenue` against `fct_trip`'s `count(*) filter (where is_billable)` and `sum(total_amount) filter (where is_billable)` over the in-window billable trips, joined to `dim_zone` on `pickup_zone_key`; (b) 0 rows where a billable measure is null while `trip_count > 0`. Money compares with `abs(a - b) > 0.01`. Use `full outer join … on … is not distinct from …` so a missing group on either side is a returned row.
-- [ ] Add `transformation/tests/assert_zone_day_billable_ties_to_fact.sql` to `test-map.json` under `modules.agg.data`.
-- [ ] Run `<plugin>/scripts/vd-intent-context-run.sh "dbt test --select assert_zone_day_billable_ties_to_fact"`; expect `PASS` and 0 rows returned.
-- [ ] Run `python3 -m pytest tests/test_maps.py -q`; expect pass.
-- [ ] Commit and push `transformation/tests/assert_zone_day_billable_ties_to_fact.sql` and `test-map.json`.
+- [x] Author `transformation/tests/assert_zone_day_billable_ties_to_fact.sql`: a `union all` of two checks that each return the offending rows — (a) per `(pickup_date, pickup_location_id)` the agg's `billable_trip_count` and `billable_revenue` against `fct_trip`'s `count(*) filter (where is_billable)` and `sum(total_amount) filter (where is_billable)` over the in-window billable trips, joined to `dim_zone` on `pickup_zone_key`; (b) 0 rows where a billable measure is null while `trip_count > 0`. Money compares with `abs(a - b) > 0.01`. Use `full outer join … on … is not distinct from …` so a missing group on either side is a returned row.
+- [x] Add `transformation/tests/assert_zone_day_billable_ties_to_fact.sql` to `test-map.json` under `modules.agg.data`.
+- [x] Run `<plugin>/scripts/vd-intent-context-run.sh "dbt test --select assert_zone_day_billable_ties_to_fact"`; expect `PASS` and 0 rows returned.
+- [x] Run `python3 -m pytest tests/test_maps.py -q`; expect pass.
+- [x] Commit and push `transformation/tests/assert_zone_day_billable_ties_to_fact.sql` and `test-map.json`.
 
 ### Task 3: `mart_daily_zone_revenue` selects from the agg
 
@@ -97,3 +97,8 @@
 - Task 1, `R-06`: 0 rows with a null billable measure; the agg-only `2024-02-12` / zone `175` row reads `billable_trip_count` 0 and `billable_revenue` 0.0.
 - Task 1, `D-06`: `reporting_region` present on all rows, 0 nulls; `min()` vs a sixth `group by` key tested and made no difference to the float noise, so the plan's six-key form is kept.
 - Task 1, JFK read straight off the agg for the task 3/`R-03` cross-check: 416,460 billable trips and 33,881,378.28 billable revenue, single zone id.
+
+- Task 2: `dbt test --select assert_zone_day_billable_ties_to_fact` — exit 0 — `PASS=1 WARN=0 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=1` — `transformation/tests/assert_zone_day_billable_ties_to_fact.sql`
+- Task 2, the test is not vacuous — each arm was shown to fail on a deliberately corrupted input, run through the test's own SQL body: a $5.00 understatement on 2024-02-01 / zone 132 returns 1 row (delta 5.0000000007), while a 0.004 change on zone 138 is correctly ignored at the cent; deleting the 2024-02-01 / zone 132 group from the agg side returns 1 row with `agg_cnt` null against `fact_cnt` 3826, exercising the `full outer join … is not distinct from` path. No row is returned by any arm on the real relation.
+- Task 2: `python3 -m pytest tests/test_maps.py -q` — exit 0 — `30 passed in 38.46s`; `test-map.json` `modules.agg.data` gains the new file and the `path:models/marts/agg` selector already covers it.
+- Task 2, note: the test adds no dbt unit test. The model has no `CASE` arm, no `rank`/`row_number`/`ntile` and no join beyond the dimension join the relation already had, and the rule it encodes (the billable predicate is the fact's own `is_billable`) is checked here against the fact row for row, which a fixture unit test would restate with less coverage.
