@@ -45,6 +45,13 @@ Not checked: whether any consumer outside this repo reads the walk's total befor
 
 The candidate repairs and the one chosen are settled in [`docs/adr/0018-the-revenue-walk-decomposes-the-total-it-reports.md`](../adr/0018-the-revenue-walk-decomposes-the-total-it-reports.md) and the design records it lists: the residual stops absorbing `airport_fee`, so the nine published components are a true decomposition of the total the same row group reports. The alternative — drop `c_airport_fee` as a component and leave the fee in the residual — was rejected because it would hide the airport fee from the walk the finance team reads it in.
 
+**Acceptance.** A fix case has no Requirement register, so these conditions carry stable IDs for the Plan and the Verification:
+
+- `R-01` The walk balances per group: for every `(trip_month, service_type_key, borough_name)`, the nine `component_amount` rows sum to that group's `total_amount` at the cent. Accept when a grouping query returns no group off by more than 0.01 — today 9 of 44 groups are.
+- `R-02` The walk's Q1 2024 total equals billable revenue: `sum(component_amount)` reads 2,629,185.82, the same as `billable_revenue`. Accept when both read 2,629,185.82 — today the walk reads 2,641,448.07. And a test exists that fails without the fix and passes with it.
+- `R-03` The published words match the built relation: the `fare_residual` descriptions in `contracts/core/fct_trip.odcs.yaml`, `_core.yml`'s doc block and the semantic model, and the walk's documents, all state the corrected meaning. Accept when `odcs.py check` and `ossie.py validate` pass and each description is read against the built behaviour.
+- `R-04` The quality scorecard's changed population is recorded, not discovered: `ops.mart_trip_quality_scorecard.unbalanced_total_count` reflects the corrected residual, and its design record says the count moves when the residual's definition moves. Accept when the rebuilt scorecard totals 26,457 flagged in-window trips, against 31,869 before the fix.
+
 ## Approvals
 
 - 2026-11-24T17:58:55Z — design approved — "approve" — 21664f2
