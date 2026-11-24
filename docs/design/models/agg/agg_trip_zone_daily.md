@@ -32,7 +32,7 @@ One row per pickup zone and pickup date.
 
 ## Consumers
 
-Depended on by: `mart_daily_zone_revenue`, and the two semantic-layer hold tests `assert_semantic_content_holds` and `assert_semantic_levels_hold`. The semantic layer binds this relation as logical source `LTS2_zone_day_agg` in `logical-model/nyc_taxi_analytics.ossie.yaml`, which maps its `trip_count`.
+Depended on by: `mart_daily_zone_revenue`, and the two semantic-layer hold tests `assert_semantic_content_holds` and `assert_semantic_levels_hold`. The semantic layer binds this relation as logical source `LTS2_zone_day_agg` in `logical-model/nyc_taxi_analytics.ossie.yaml`, which maps its `trip_count`, `billable_trip_count` and `billable_revenue`.
 
 ## History
 

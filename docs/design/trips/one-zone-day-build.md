@@ -27,7 +27,7 @@ consolidation does not change it.
   which is the duplication being removed.
 - `D-03` The billable rule is applied once, in this build, and reports on the grain
   select its measures rather than filtering again
-  ([ADR 0018](../../adr/0018-the-billable-rule-is-applied-once-in-the-zone-day-build.md)).
+  ([ADR 0018](../../adr/0018-the-billable-rule-is-evaluated-once-in-the-zone-day-build.md)).
   The rule itself is unchanged and still
   [ADR 0003](../../adr/0003-billable-trip-definition-and-where-it-applies.md).
 - `D-04` A report on this grain keeps its own column names and its own meaning for
