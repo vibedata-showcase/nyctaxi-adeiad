@@ -39,7 +39,7 @@ source, no number changed) is satisfiable only by making one build carry both.
 
 - [ ] `R-01` `agg.agg_trip_zone_daily` is the single zone×day build: `finance.mart_daily_zone_revenue` selects from it instead of from `fct_trip`, and neither relation is rebuilt from `fct_trip` for the same grain — accept when `mart_daily_zone_revenue`'s compiled SQL references `agg_trip_zone_daily` and no longer `fct_trip`, and both relations compile and build — source: request ("build our report from the operations figures, so that there is one source"), user answer on the source
 
-- [ ] `R-02` Every number in `finance.mart_daily_zone_revenue` is unchanged: same grain (zone × day), same rows, same column set and types, and identical values — accept when, over the same window, the rebuilt relation returns exactly 20,770 rows with no duplicate (zone, day), joined against today's relation at `1184020` with zero rows on either side and zero differing values per column — source: request ("No number in our report may change")
+- [ ] `R-02` Every number in `finance.mart_daily_zone_revenue` is unchanged: same grain (zone × day), same rows, same column set and types, and identical values — accept when, over the same window, the rebuilt relation returns exactly 20,770 rows with no duplicate (zone, day), joined against today's relation at `1184020` with zero rows on either side, zero differing `trip_count` and text values, and zero differing money values **rounded to the cent** (the precision the report publishes; DuckDB's parallel float sums are not reproducible to the last bit, so bit equality is not an available acceptance) — source: request ("No number in our report may change"), user answer on precision
 
 - [ ] `R-03` Ravi's acceptance check passes on the rebuilt report: Q1 2024 totals and JFK Airport totals are exactly 9,604,511 trips, 263,480,834.99 revenue, 416,460 trips and 33,881,378.28 revenue — accept when a query over the rebuilt `mart_daily_zone_revenue` returns those four figures to the cent — source: request (acceptance check)
 
@@ -67,6 +67,7 @@ source, no number changed) is satisfiable only by making one build carry both.
 | Null components in the billable sums | Not applicable: no in-window billable trip has a null fare, tip, surcharge or toll amount, and the sums match today's mart exactly | data (query over `core.fct_trip`) |
 | Unmatched and null zone keys | Every row kept; the build joins `dim_zone` as it does today, and no in-window trip has a null or unmatched pickup zone key, so the join drops nothing | existing model `agg_trip_zone_daily`, data (0 null, 0 unmatched) |
 | Reuse | Build on `agg.agg_trip_zone_daily` and make the mart read it; do not rebuild either from `fct_trip` twice | playbook default `Reuse`, user answer |
+| What "no number changes" means for a float measure | Equal to the cent; bit-for-bit equality is not achievable because DuckDB's parallel float sums vary in the last bits on recomputation, including when the agg's own stored columns are recomputed from `fct_trip` | user answer |
 | Extended scope | No schedule, no contract removal, no new source | playbook `Extended scope` |
 
 ## Out of scope

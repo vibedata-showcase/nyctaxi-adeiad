@@ -24,7 +24,9 @@ This supersedes ADR 0002, which said every gold mart applies the rule. The model
 
 ## Affected designs
 
+- [`trips/one-zone-day-build.md`](../design/trips/one-zone-day-build.md)
 - [`models/core/fct_trip.md`](../design/models/core/fct_trip.md)
 - [`models/intermediate/int_trip_quality_flags.md`](../design/models/intermediate/int_trip_quality_flags.md)
+- [`models/agg/agg_trip_zone_daily.md`](../design/models/agg/agg_trip_zone_daily.md)
 - [`models/finance/mart_daily_zone_revenue.md`](../design/models/finance/mart_daily_zone_revenue.md)
 - [`models/agg/agg_od_flow_matrix.md`](../design/models/agg/agg_od_flow_matrix.md)
