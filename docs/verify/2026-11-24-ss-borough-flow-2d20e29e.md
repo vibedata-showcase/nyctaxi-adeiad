@@ -51,6 +51,7 @@ No golden baseline is configured for this relation, so every row above stands on
 | Manifest contract diff | `diff_manifest_contract.py .agents_tmp/base-manifest.json transformation/target/manifest.json` | 0 | pass — `weaker: []`; the single `stronger` entry is the new enforced contract on the new model, which adds a guarantee and removes nothing, so no breaking-contract stop applies |
 | Ship currency | `ship_currency.py --rows .agents_tmp/ship-currency-rows.json` | 0 | pass — `{"fresh": true, "stale": []}` against `origin/main` |
 | Domain sweep | `grep` of `CONTEXT.md` for every term the design record adds | 0 | domain sweep: nothing new — `Borough flow` and `Cross-borough share` were added at design, ADR 0018/0019/0020 are recorded |
+| Publication | `gh pr create --head intent/ss-borough-flow-2d20e29e` then `gh pr view 5 --json number,url,state,headRefName,baseRefName` | 0 | open — https://github.com/vibedata-showcase/nyctaxi-adeiad/pull/5, state OPEN, base main |
 
 **Scope check.** The intent touched only the Plan's rows: the new model and its properties, three singular tests, the Ossie document and its regenerated tests, the contract, `test-map.json`, the design record, three ADRs (two new, one corrected) and link-only additions to six existing ADRs' `## Affected designs`. No published model, macro, seed, project config or profile changed. Nothing in `core`, `finance`, `ops`, `intermediate`, `staging` or `macros` differs from the merge base, so no published promise moved and no consumer was affected.
 
