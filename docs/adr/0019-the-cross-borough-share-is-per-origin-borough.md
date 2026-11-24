@@ -28,3 +28,5 @@ Newark Airport is a borough for this purpose, so a trip between Manhattan and Ne
 - A future surface that reports a different base, such as a share restricted to New York City boroughs, is a different measure and needs its own name.
 
 ## Affected designs
+
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)

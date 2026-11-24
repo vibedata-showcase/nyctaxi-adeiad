@@ -26,3 +26,5 @@ The user's answer is the source: "The totals must equal billable revenue, so eve
 - The table's population is the whole billable population of the reporting window, so its totals are checkable against `fct_trip` and its shape is guarded by that check.
 
 ## Affected designs
+
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
