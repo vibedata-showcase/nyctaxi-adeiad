@@ -23,3 +23,7 @@ The trade-off is accepted rather than hidden: of roughly 40 populated pairs a mo
 - A borough pair appears in a month only when it carries a billable trip that month; a month in which a pair is empty has no row, so a quarter total is the sum of the rows that exist.
 - Summing the mart's trips over a month reproduces the star's billable trip count for that month exactly. That closure is a testable property and is tested.
 - ADR 0017 is unchanged: `agg_od_flow_matrix` keeps its floor, and the two surfaces answer different questions and are not interchangeable.
+
+## Affected designs
+
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)

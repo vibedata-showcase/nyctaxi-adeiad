@@ -23,3 +23,7 @@ The grouping follows the zone dimension's own borough attribute, so an unresolve
 - A reader who wants the network figure aggregates the mart's trips and crossing trips themselves, and gets a different, clearly-labelled number.
 - The share is computed from the same rows as the matrix, so it can never disagree with the trips and revenue published beside it.
 - A change to how boroughs are assigned changes this measure, and it is a decision to record rather than a filter to add quietly.
+
+## Affected designs
+
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
