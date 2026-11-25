@@ -113,7 +113,7 @@ models:
       - name: billable_trip_count
         data_type: BIGINT
         data_tests: [not_null]
-        description: Billable trips on the zone-day, the count of rows the billable measures below are computed over. Zero where the zone-day's trips are all non-billable; `trip_count` above is every trip either way.
+        description: Trips whose total amount is positive.
       - name: billable_fare_revenue
         data_type: DOUBLE
         description: Sum of fare_amount over the zone-day's billable trips; null when it has none.
