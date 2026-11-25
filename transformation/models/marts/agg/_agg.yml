@@ -180,24 +180,16 @@ models:
         description: Calendar month of the pickup date, as its first day.
       - name: origin_borough
         data_type: VARCHAR
-        data_tests:
-          - not_null
-          - accepted_values:
-              arguments:
-                values: [Bronx, Brooklyn, EWR, Manhattan, 'N/A', Queens, Staten Island, Unknown]
+        data_tests: [not_null, {accepted_values: {arguments: {values: [Bronx, Brooklyn, EWR, Manhattan, N/A, Queens, Staten Island, Unknown]}}}]
         description: Borough of the pickup zone. EWR is out of state and Unknown and N/A are the zones no borough could be resolved for; both stay in the rollup (ADR 0012).
       - name: dest_borough
         data_type: VARCHAR
-        data_tests:
-          - not_null
-          - accepted_values:
-              arguments:
-                values: [Bronx, Brooklyn, EWR, Manhattan, 'N/A', Queens, Staten Island, Unknown]
+        data_tests: [not_null, {accepted_values: {arguments: {values: [Bronx, Brooklyn, EWR, Manhattan, N/A, Queens, Staten Island, Unknown]}}}]
         description: Borough of the dropoff zone, on the same eight groups as origin_borough.
-      - name: trip_count
+      - name: billable_trip_count
         data_type: BIGINT
         data_tests: [not_null]
-        description: Billable trips picked up in the month that start in origin_borough and end in dest_borough.
+        description: Trips whose total amount is positive.
       - name: total_revenue
         data_type: DOUBLE
         data_tests: [not_null]

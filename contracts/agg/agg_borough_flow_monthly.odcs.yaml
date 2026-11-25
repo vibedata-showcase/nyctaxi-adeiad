@@ -3,7 +3,7 @@ kind: DataContract
 id: ba654077-bad8-505c-ba51-7cb5f8a7c005
 name: agg_borough_flow_monthly
 version: 1.0.0
-status: proposed
+status: active
 servers:
   - server: sample-nyctaxi-comp
     type: custom
@@ -65,7 +65,7 @@ schema:
                 - Staten Island
                 - Unknown
             mustBe: 0
-      - name: trip_count
+      - name: billable_trip_count
         logicalType: integer
         physicalType: BIGINT
         description: Billable trips picked up in the month that start in origin_borough and end in dest_borough.

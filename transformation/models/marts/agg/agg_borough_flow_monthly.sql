@@ -28,7 +28,7 @@ pair_month as (
         trip_month,
         origin_borough,
         dest_borough,
-        cast(count(*) as bigint) as trip_count,
+        cast(count(*) as bigint) as billable_trip_count,
         cast(sum(total_amount) as double) as total_revenue,
         -- is_distinct_from keeps a null borough name from reading as "same
         -- borough"; a null that slips through counts as crossing, which the
@@ -44,13 +44,13 @@ select
     trip_month,
     origin_borough,
     dest_borough,
-    trip_count,
+    billable_trip_count,
     total_revenue,
     cross_borough_trip_count,
     cast(
         {{ safe_divide(
             'sum(cross_borough_trip_count) over (partition by trip_month, origin_borough)',
-            'sum(trip_count) over (partition by trip_month, origin_borough)'
+            'sum(billable_trip_count) over (partition by trip_month, origin_borough)'
         ) }} as double
     ) as cross_borough_trip_share
 from pair_month

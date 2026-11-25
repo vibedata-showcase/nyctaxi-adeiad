@@ -32,7 +32,7 @@ unit_tests:
           - {zone_key: z3, borough_name: EWR}
     expect:
       rows:
-        - {trip_month: '2024-02-01', origin_borough: Manhattan, dest_borough: Manhattan, trip_count: 1, total_revenue: 30.00, cross_borough_trip_count: 0, cross_borough_trip_share: 0.6666666666666666}
-        - {trip_month: '2024-02-01', origin_borough: Manhattan, dest_borough: Queens, trip_count: 1, total_revenue: 10.00, cross_borough_trip_count: 1, cross_borough_trip_share: 0.6666666666666666}
-        - {trip_month: '2024-02-01', origin_borough: Manhattan, dest_borough: EWR, trip_count: 1, total_revenue: 20.00, cross_borough_trip_count: 1, cross_borough_trip_share: 0.6666666666666666}
-        - {trip_month: '2024-02-01', origin_borough: Queens, dest_borough: Queens, trip_count: 1, total_revenue: 40.00, cross_borough_trip_count: 0, cross_borough_trip_share: 0.0}
+        - {trip_month: '2024-02-01', origin_borough: Manhattan, dest_borough: Manhattan, billable_trip_count: 1, total_revenue: 30.00, cross_borough_trip_count: 0, cross_borough_trip_share: 0.6666666666666666}
+        - {trip_month: '2024-02-01', origin_borough: Manhattan, dest_borough: Queens, billable_trip_count: 1, total_revenue: 10.00, cross_borough_trip_count: 1, cross_borough_trip_share: 0.6666666666666666}
+        - {trip_month: '2024-02-01', origin_borough: Manhattan, dest_borough: EWR, billable_trip_count: 1, total_revenue: 20.00, cross_borough_trip_count: 1, cross_borough_trip_share: 0.6666666666666666}
+        - {trip_month: '2024-02-01', origin_borough: Queens, dest_borough: Queens, billable_trip_count: 1, total_revenue: 40.00, cross_borough_trip_count: 0, cross_borough_trip_share: 0.0}

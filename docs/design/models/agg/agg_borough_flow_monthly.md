@@ -32,6 +32,7 @@ borough alone (loses the destination the question asks for).
 - `D-09` The model is a `table` in the `agg` folder, materialised by the folder's `dbt_project.yml` default, and carries `contract: {enforced: true}` with every output cast to its declared type, as `agg_od_flow_matrix` does. Source: `AGENTS.md`; `.agents/skills/dbt-models/SKILL.md`.
 - `D-10` The relation is a boundary model, so it pays all three boundary artifacts: a `public` dbt model with an enforced contract, an ODCS contract at `contracts/agg/agg_borough_flow_monthly.odcs.yaml`, and an aggregate logical source in `logical-model/nyc_taxi_analytics.ossie.yaml`. Source: `R-06`; `repo-map.json` `layers`.
 - `D-11` The share column is not mapped to a logical-source column. It is a ratio of two aggregates over the origin borough's rows, so the semantic model expresses it as a ratio metric over a filtered numerator rather than binding it to the physical column, and the source's `note` records the refusal. Source: `D-07`; `.agents/skills/semantic-model/SKILL.md` (a rate is a `derived_expression` over its numerator and denominator metrics, bound to no column).
+- `D-12` The model's trip count column is `billable_trip_count`, not `trip_count`, because the Ossie `trip_count` field reads "Trips, billable or not" and `odcs.py generate` writes that description onto any column of that name, which would misdescribe a count of billable trips only. Supersedes the column name implied by `D-02`.
 
 ## Rejected
 
@@ -53,10 +54,7 @@ already carries them.
 documents:
   - logical-model/nyc_taxi_analytics.ossie.yaml
     datasets: []
-    metrics:
-      added:
-        - cross_borough_trip_count
-        - cross_borough_trip_share
+    metrics: []
     logical_sources:
       added:
         - LTS10_borough_flow_monthly
@@ -66,19 +64,20 @@ ontology:
     mappings: []
 ```
 
-- `LTS10_borough_flow_monthly` binds `trip_count` to `billable_trip_count` and
-  `total_revenue` to `billable_revenue`, under a content filter naming the same
-  window, the billable flag and both zone keys. Its `content_grain` is the
-  model's grain, and its `content_levels` reach the `month` level of `date` and
-  the `borough` level of `zone` through both roles.
-- `cross_borough_trip_count` is a new metric: a `SUM` over the source's
-  `trip_count`, filtered to rows whose origin and destination borough names
-  differ. `cross_borough_trip_share` is a `derived_expression` over that
-  numerator and `billable_trip_count`, bound to no column, per D-11.
-- `cross_borough_trip_share` is not `trip_count /` anything at the destination
-  level: a share grouped by destination would read as a share of arrivals, which
-  is a different measure and is not asked for. The metric carries no
-  destination grouping.
+- `LTS10_borough_flow_monthly` binds `billable_trip_count` to `billable_trip_count` and
+  `billable_revenue` to `total_revenue`, under a content filter naming the same
+  window, the billable flag and both zone keys. Its `content_grain` is the model's
+  grain, and its `content_levels` reach the `month` level of `date` and the
+  `borough` level of `zone` through both roles.
+- **No metric is added, and the two cross-borough measures are refused.** The
+  fact carries `pickup_zone_key` and `dropoff_zone_key`, not boroughs, so no
+  detail row states whether two zones share a borough, and a metric over
+  `cross_borough_trip_count` cannot compile against `LTS1_detail`. Superseding the
+  earlier line that named the two metrics as added: the crossing subset and the
+  share stay physical columns of this table, described in its dbt model and its
+  contract and held by their own tests, and the source `note` records the refusal
+  and what would make a metric expressible — a fact that carries borough
+  identity. Source: `D-11`; the `generate-tests` failure on the detail mapping.
 - No concept is added to the ontology: the relation rows are trips rolled up by
   borough, and every concept it reaches — Trip, Zone, Date — is already mapped
   on the trips document. This is recorded as `[]` rather than left out, so the
@@ -92,3 +91,4 @@ ontology:
 ## History
 
 - 2026-11-25 — Borough-to-borough trips and revenue, Q1 2024 3 — created with the model's design — D-01…D-11 — terms: added cross-borough trip
+- 2026-11-25 — Borough-to-borough trips and revenue, Q1 2024 3 — execution: renamed the count column, refused the two metrics the fact cannot support — D-12 — terms: none new

@@ -8,7 +8,7 @@ with origin_month as (
         trip_month,
         origin_borough,
         sum(cross_borough_trip_count) as cross_trips,
-        sum(trip_count) as trips
+        sum(billable_trip_count) as trips
     from {{ ref('agg_borough_flow_monthly') }}
     group by 1, 2
 ),

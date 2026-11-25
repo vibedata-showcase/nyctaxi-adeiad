@@ -6,7 +6,7 @@
 with published as (
     select
         trip_month,
-        sum(trip_count) as trip_count,
+        sum(billable_trip_count) as trip_count,
         sum(total_revenue) as total_revenue
     from {{ ref('agg_borough_flow_monthly') }}
     group by 1
