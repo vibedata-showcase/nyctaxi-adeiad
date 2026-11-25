@@ -27,4 +27,5 @@ It is hard to reverse: once consumers read billable figures off the aggregate, w
 
 ## Affected designs
 
-None yet: `models/finance/mart_daily_zone_revenue.md` and the design record for `agg_trip_zone_daily` cite this ADR when the design is written under this intent.
+- [`models/agg/agg_trip_zone_daily.md`](../design/models/agg/agg_trip_zone_daily.md)
+- [`models/finance/mart_daily_zone_revenue.md`](../design/models/finance/mart_daily_zone_revenue.md)
