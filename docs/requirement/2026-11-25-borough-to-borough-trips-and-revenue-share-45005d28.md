@@ -52,3 +52,4 @@ She will read the result as a table per month: one row per origin borough and de
 None. How the no-pair origin borough-month is represented (a null destination borough or a second relation) and the column names are design questions, recorded as pending for design.
 
 ## Approvals
+- 2026-11-25T03:53:35Z — requirement approved — "Approve — continue to design" — ad6ef77
