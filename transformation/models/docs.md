@@ -55,3 +55,13 @@ This is a property of the business, not missing data. `is_fleet_attributed`
 states it explicitly so that no consumer has to infer it from a null, and so
 that a fleet-level denominator is never taken over the whole fact.
 {% enddocs %}
+
+{% docs daily_zone_revenue_trip_count %}
+Billable trips on the zone-day. The report publishes only zone-days with at
+least one, so every row it holds has a count of one or more.
+
+This is not the same figure as `trip_count` on `agg_trip_zone_daily`, which
+counts every trip in the window billable or not. A `doc()` pointer carries that
+here because the generated description resolves `trip_count` by column name to
+the all-trip metric, which would state the opposite of what this model does.
+{% enddocs %}

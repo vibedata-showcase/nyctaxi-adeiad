@@ -27,7 +27,7 @@ models:
         data_type: VARCHAR
       - name: trip_count
         data_type: BIGINT
-        description: Billable trips; the model publishes only zone-days with at least one.
+        description: '{{ doc("daily_zone_revenue_trip_count") }}'
       - name: fare_revenue
         data_type: DOUBLE
         description: Sum of fare_amount over the zone-day's billable trips.
