@@ -22,3 +22,4 @@ When a fact's lookup finds no dimension row in force, the key is null. No dimens
 ## Affected designs
 
 - [`models/core/fct_trip.md`](../design/models/core/fct_trip.md)
+- [`models/agg/agg_trip_zone_daily.md`](../design/models/agg/agg_trip_zone_daily.md)

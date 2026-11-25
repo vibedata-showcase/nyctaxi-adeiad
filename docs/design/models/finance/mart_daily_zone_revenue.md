@@ -10,18 +10,33 @@ Daily revenue by pickup zone.
 
 One row per pickup zone and trip date.
 
+## Schema
+
+- `transformation/models/marts/finance/`: `finance` (default). Source: user answer (application-owner accepted the folder's current schema).
+
 ## Decisions
 
 - `D-01` Apply the billable rule and the reporting window here, in gold, and nowhere upstream, so quality work can still see the rows this excludes ([ADR 0003](../../../adr/0003-billable-trip-definition-and-where-it-applies.md)). Source: docs/requirement/2026-08-29-the-trip-fact.md R-03, [ADR 0003](../../../adr/0003-billable-trip-definition-and-where-it-applies.md).
+- `D-02` Read `agg.agg_trip_zone_daily` and no other relation, so the zone aggregation and the billable rule are computed once instead of twice. The mart becomes a projection of the aggregate: it renames columns and applies the population requirement below, and adds no aggregation of its own. Source: R-01, request ("so that there is one source").
+- `D-03` Supersedes `D-01` on where the rule is applied: the rule now runs in `agg_trip_zone_daily` (its `D-04`), and this mart inherits it through the billable-only columns rather than filtering `f.is_billable` itself, which it cannot do because the aggregate holds no per-trip flag. The rule's substance — a positive total, inside the reporting window — is unchanged, and the reporting window still bounds this mart's population through the aggregate's own window. Source: R-09, user answer on ADR 0003.
+- `D-04` Publish a row only where the zone-day has at least one billable trip, so the report keeps the 7,961 rows and every cell Finance reads today. The aggregate deliberately keeps the 36 zero-billable zone-days it holds, and this mart is where the narrower population is applied. Source: R-05, user answer.
+- `D-05` Publish the 11 columns under their existing names and types, reading `borough` from `borough_name` and `trip_count` from `billable_trip_count`, and reproduce each measure exactly rather than approximately: summing with a `filter` yields the identical floating-point result as summing a pre-filtered population, so no tolerance is introduced. Source: R-02, R-05.
+- `D-06` Correct the `trip_count` description: the column counts billable trips, not "trips, billable or not" as the properties file says today. The value is unchanged; only the published wording was wrong. Source: R-05, R-07.
 
 ## Rejected
 
 - Applying the rule in silver: the excluded rows would be invisible to quality work.
+- Keeping a second aggregation in this mart over `core.fct_trip`: it recovers the rule locally but reinstates exactly the duplicate build the request removes.
+- Emitting a zero row for a zone-day with no billable trip: it would change the row count of the morning report without changing a total, and the aggregate already publishes that population.
+- Building on `agg.agg_trip_zone_daypart_dow`, the finer-grain published cube: it carries no date column, so it cannot answer a daily grain, and its revenue columns are population-wide, so it cannot supply billable revenue without the same extension.
 
 ## Consumers
 
-None in this repo.
+None in this repo: the dbt graph shows no model downstream, only this model's own column tests and the two singular semantic tests.
+
+Outside the repository, the finance team reads it every morning as the daily zone revenue report.
 
 ## History
 
 - - 2026-10-14 — trip-fact — design record written; audience wording removed from the model description — D-01
+- - 2026-11-25 — lfq-2 — re-sourced from `agg.agg_trip_zone_daily`; the billable rule moves upstream, the population and every published number stay — D-02, D-03, D-04, D-05, D-06 — terms: none new
