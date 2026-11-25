@@ -46,6 +46,7 @@
 | Contract validation build | `cd transformation && dbt build --select agg_borough_flow_monthly --target dev` | 0 | pass, PASS=13 WARN=1 ERROR=0, no `contract violation` |
 | Ship sandbox destination | `python .../scripts/assert_dbt_destination.py` after that build | 0 | pass, 1 relation in the sandbox |
 | Ship currency | `python .../scripts/ship_currency.py --rows .agents_tmp/ship-currency-rows.json` | 0 | fresh; `stale: []` |
+| Domain sweep | `grep -n "Cross-borough share\|Published flow" CONTEXT.md`; the design record's ADR citations | - | `domain sweep: nothing new` — both terms landed with the Requirement and both decisions have ADRs (0018, 0019), so nothing was missing |
 
 ## Findings
 
