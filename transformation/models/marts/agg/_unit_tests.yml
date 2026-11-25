@@ -1,0 +1,55 @@
+version: 2
+
+unit_tests:
+  - name: agg_borough_flow_monthly_a_borough_pair_keeps_its_trips_and_share
+    description: >
+      A trip inside Manhattan, a trip from Manhattan to Brooklyn and a trip from
+      Manhattan to the unresolved borough Unknown: three rows, the share over
+      Manhattan's three departing trips, and Unknown counted as a crossing
+      because it is a different borough (ADR 0018).
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('fct_trip')
+        format: dict
+        rows:
+          - {trip_key: k1, pickup_date: '2024-01-10', pickup_datetime: '2024-01-10 09:00:00', pickup_date_key: 20240110, pickup_zone_key: z1, dropoff_zone_key: z2, is_billable: true, total_amount: 10.0}
+          - {trip_key: k2, pickup_date: '2024-01-11', pickup_datetime: '2024-01-11 09:00:00', pickup_date_key: 20240111, pickup_zone_key: z1, dropoff_zone_key: z3, is_billable: true, total_amount: 20.0}
+          - {trip_key: k3, pickup_date: '2024-01-12', pickup_datetime: '2024-01-12 09:00:00', pickup_date_key: 20240112, pickup_zone_key: z1, dropoff_zone_key: z4, is_billable: true, total_amount: 30.0}
+      - input: ref('dim_zone')
+        format: dict
+        rows:
+          - {zone_key: z1, borough_name: Manhattan}
+          - {zone_key: z2, borough_name: Manhattan}
+          - {zone_key: z3, borough_name: Brooklyn}
+          - {zone_key: z4, borough_name: Unknown}
+    expect:
+      format: dict
+      rows:
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, destination_borough: Brooklyn, is_cross_borough: true, billable_trip_count: 1, billable_revenue: 20.0, origin_month_trip_count: 3, origin_month_crossing_trip_count: 2, origin_month_crossing_share: 0.6666666666666666, month_unplaced_billable_trip_count: 0}
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, destination_borough: Manhattan, is_cross_borough: false, billable_trip_count: 1, billable_revenue: 10.0, origin_month_trip_count: 3, origin_month_crossing_trip_count: 2, origin_month_crossing_share: 0.6666666666666666, month_unplaced_billable_trip_count: 0}
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, destination_borough: Unknown, is_cross_borough: true, billable_trip_count: 1, billable_revenue: 30.0, origin_month_trip_count: 3, origin_month_crossing_trip_count: 2, origin_month_crossing_share: 0.6666666666666666, month_unplaced_billable_trip_count: 0}
+
+  - name: agg_borough_flow_monthly_only_billable_placed_trips_reach_a_pair
+    description: >
+      A non-billable trip and two trips whose pickup or dropoff zone key is null:
+      none of them opens a pair, and the two unplaced billable trips are counted
+      on the month rather than dropped silently (ADR 0003, ADR 0015). A month
+      with no pair at all emits no row (ADR 0019).
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('fct_trip')
+        format: dict
+        rows:
+          - {trip_key: k1, pickup_date: '2024-01-10', pickup_datetime: '2024-01-10 09:00:00', pickup_date_key: 20240110, pickup_zone_key: z1, dropoff_zone_key: z2, is_billable: true, total_amount: 10.0}
+          - {trip_key: k2, pickup_date: '2024-01-11', pickup_datetime: '2024-01-11 09:00:00', pickup_date_key: 20240111, pickup_zone_key: z1, dropoff_zone_key: z2, is_billable: false, total_amount: -5.0}
+          - {trip_key: k3, pickup_date: '2024-01-12', pickup_datetime: '2024-01-12 09:00:00', pickup_date_key: 20240112, pickup_zone_key: null, dropoff_zone_key: z2, is_billable: true, total_amount: 40.0}
+          - {trip_key: k4, pickup_date: '2024-01-13', pickup_datetime: '2024-01-13 09:00:00', pickup_date_key: 20240113, pickup_zone_key: z1, dropoff_zone_key: null, is_billable: true, total_amount: 50.0}
+      - input: ref('dim_zone')
+        format: dict
+        rows:
+          - {zone_key: z1, borough_name: Manhattan}
+          - {zone_key: z2, borough_name: Manhattan}
+    expect:
+      format: dict
+      rows:
+        - {month_start_date: '2024-01-01', origin_borough: Manhattan, destination_borough: Manhattan, is_cross_borough: false, billable_trip_count: 1, billable_revenue: 10.0, origin_month_trip_count: 1, origin_month_crossing_trip_count: 0, origin_month_crossing_share: 0.0, month_unplaced_billable_trip_count: 2}

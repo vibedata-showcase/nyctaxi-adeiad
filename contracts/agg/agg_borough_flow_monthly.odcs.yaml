@@ -1,0 +1,87 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: 6777a143-0305-4fa0-b2df-fb1f85f2048e
+name: agg_borough_flow_monthly
+version: 1.0.0
+status: active
+servers:
+  - server: sample-nyctaxi-comp
+    type: duckdb
+    database: domain.duckdb
+    schema: agg
+schema:
+  - name: agg_borough_flow_monthly
+    dataGranularityDescription: One row per calendar month, origin borough and destination borough, over the billable trips inside the reporting window. The borough axis is every borough value the zone dimension carries, and it is one dimension reached through two roles, the pickup zone and the dropoff zone.
+    properties:
+      - name: month_start_date
+        description: "First day of the calendar month the trips were picked up in; the month level's key."
+        logicalType: date
+        physicalType: DATE
+        required: true
+        primaryKey: true
+      - name: origin_borough
+        description: "Borough of the pickup zone, every borough value the zone dimension carries: Bronx, Brooklyn, EWR, Manhattan, N/A, Queens, Staten Island and Unknown (ADR 0018)."
+        logicalType: string
+        physicalType: VARCHAR
+        required: true
+        primaryKey: true
+      - name: destination_borough
+        description: "Borough of the dropoff zone, on the same axis as the origin borough (ADR 0018)."
+        logicalType: string
+        physicalType: VARCHAR
+        required: true
+        primaryKey: true
+      - name: is_cross_borough
+        description: "True when the trip ended outside the borough it started in (ADR 0018)."
+        logicalType: boolean
+        physicalType: BOOLEAN
+        required: true
+      - name: billable_trip_count
+        description: "Billable trips from the origin borough to the destination borough in the month. Every pair that carries traffic is published, so these sum to the month's billable trips except for the trips no zone version places (ADR 0019)."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: billable_revenue
+        description: "Sum of total_amount over those trips."
+        logicalType: number
+        physicalType: DOUBLE
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: origin_month_trip_count
+        description: "Billable trips that departed the origin borough in the month, over every destination: the denominator of the crossing share. Repeated on each of the borough's rows, so it must not be summed across them."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: origin_month_crossing_trip_count
+        description: "Of those, the trips that ended in a different borough: the numerator of the crossing share. Repeated on each of the borough's rows, so it must not be summed across them."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: origin_month_crossing_share
+        description: "origin_month_crossing_trip_count over origin_month_trip_count, a fraction rather than a percentage: the share of the origin borough's month trips that left it. Null only when the denominator is zero (ADR 0016). Repeated, not additive."
+        logicalType: number
+        physicalType: DOUBLE
+      - name: month_unplaced_billable_trip_count
+        description: "The month's billable trips that no zone version places, because a pickup or dropoff zone key is null, and which therefore appear in no row of this relation; 0 when there are none. Repeated on each of the month's rows, so it must not be summed across them."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0

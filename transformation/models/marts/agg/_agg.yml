@@ -539,3 +539,56 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+  - name: agg_borough_flow_monthly
+    description: >
+      Borough-to-borough flow, one row per month and borough pair. The
+      origin-destination matrix answers the same question at zone-pair grain and
+      keeps only pairs above a floor (ADR 0017); this mart publishes every pair
+      that carries billable traffic, so its totals are the window's billable
+      totals and the crossing share has the whole departing population as its
+      denominator (ADR 0019). The share ships with its numerator and denominator
+      on the same row (ADR 0016), and the month's unplaced trips are counted
+      beside it (ADR 0015).
+    config:
+      access: protected
+    contract: {enforced: true}
+    columns:
+      - name: month_start_date
+        data_type: DATE
+        data_tests: [not_null]
+        description: First day of the calendar month the trips were picked up in; the month level's key.
+      - name: origin_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: 'Borough of the pickup zone, every borough value the zone dimension carries: Bronx, Brooklyn, EWR, Manhattan, N/A, Queens, Staten Island and Unknown (ADR 0018).'
+      - name: destination_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough of the dropoff zone, on the same axis as the origin borough (ADR 0018).
+      - name: is_cross_borough
+        data_type: BOOLEAN
+        data_tests: [not_null]
+        description: True when the trip ended outside the borough it started in (ADR 0018).
+      - name: billable_trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: Trips whose total amount is positive.
+      - name: billable_revenue
+        data_type: DOUBLE
+        data_tests: [not_null]
+        description: Total amount charged on billable trips. Excludes cash tips.
+      - name: origin_month_trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: 'Billable trips that departed the origin borough in the month, over every destination: the denominator of the crossing share. Repeated on each of the borough''s rows, so it must not be summed across them.'
+      - name: origin_month_crossing_trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: 'Of those, the trips that ended in a different borough: the numerator of the crossing share. Repeated on each of the borough''s rows, so it must not be summed across them.'
+      - name: origin_month_crossing_share
+        data_type: DOUBLE
+        description: 'origin_month_crossing_trip_count over origin_month_trip_count, a fraction rather than a percentage: the share of the origin borough''s month trips that left it. Null only when the denominator is zero (ADR 0016). Repeated, not additive.'
+      - name: month_unplaced_billable_trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: The month's billable trips that no zone version places, because a pickup or dropoff zone key is null, and which therefore appear in no row of this relation; 0 when there are none. Repeated on each of the month's rows, so it must not be summed across them.

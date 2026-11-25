@@ -76,6 +76,10 @@ The trips between one pickup zone and one dropoff zone.
 **Published flow**:
 An origin-destination pair with at least 25 billable trips in the reporting window, the population the origin-destination matrix reports (ADR 0017). Narrower than a flow: a pair below the floor exists in the trips but is not published.
 
+**Cross-borough trip**:
+A trip that ends in a different borough than the one it started in, compared on the borough values `dim_zone` carries. A trip to a borough the TLC could not resolve counts, because it still left the borough it started in (ADR 0018).
+_Not_: a trip between two of the five NYC boroughs, because EWR and the unresolved boroughs are boroughs on the same axis.
+
 **Medallion**:
 The licence to operate a taxi. It is transferable: the licence outlives the vehicle it currently covers and the driver who currently holds it, so it is neither of them.
 _Not_: the bronze, silver and gold layering, which is a platform term defined elsewhere.
