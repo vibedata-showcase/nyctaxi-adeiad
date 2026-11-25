@@ -110,6 +110,21 @@ models:
         data_type: DOUBLE
       - name: revenue_rank_that_day
         data_type: BIGINT
+      - name: reporting_region
+        data_type: VARCHAR
+      - name: billable_trip_count
+        data_type: BIGINT
+        description: Trips whose total amount is positive.
+      - name: billable_fare_revenue
+        data_type: DOUBLE
+      - name: billable_tip_revenue
+        data_type: DOUBLE
+      - name: billable_surcharge_revenue
+        data_type: DOUBLE
+      - name: billable_toll_revenue
+        data_type: DOUBLE
+      - name: billable_total_revenue
+        data_type: DOUBLE
   - name: agg_od_flow_matrix
     description: >
       Origin-to-destination flow -- the same zone dimension joined twice, in both

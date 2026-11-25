@@ -2,7 +2,7 @@ apiVersion: v3.2.0
 kind: DataContract
 id: 6767ad11-6380-5435-8382-25fdafb31a75
 name: agg_trip_zone_daily
-version: 1.0.1
+version: 1.1.0
 status: active
 servers:
   - server: sample-nyctaxi-comp
@@ -27,12 +27,42 @@ schema:
       - name: borough_name
         logicalType: string
         physicalType: VARCHAR
+      - name: reporting_region
+        logicalType: string
+        physicalType: VARCHAR
+        description: Reporting region of the pickup zone's borough.
       - name: trip_count
         logicalType: integer
         physicalType: BIGINT
+        description: Trips, billable or not.
       - name: total_revenue
         logicalType: number
         physicalType: DOUBLE
+        description: Sum of total_amount over every trip, billable or not; includes refunds as negative amounts.
+      - name: billable_trip_count
+        logicalType: integer
+        physicalType: BIGINT
+        description: Trips whose total amount is positive (ADR 0003); zero for a zone-day whose trips are all non-billable.
+      - name: billable_fare_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of fare_amount over billable trips; zero when the zone-day has no billable trip.
+      - name: billable_tip_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of tip_amount over billable trips; zero when the zone-day has no billable trip. Cash tips are unmeasured, not zero.
+      - name: billable_surcharge_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of the pass-through surcharges (extra, MTA tax, improvement and congestion) over billable trips; zero when the zone-day has no billable trip.
+      - name: billable_toll_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of tolls_amount over billable trips; zero when the zone-day has no billable trip.
+      - name: billable_total_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of total_amount over billable trips, the report's revenue measure; zero when the zone-day has no billable trip.
       - name: total_miles
         logicalType: number
         physicalType: DOUBLE

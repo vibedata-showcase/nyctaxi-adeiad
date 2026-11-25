@@ -1,0 +1,58 @@
+version: 2
+
+unit_tests:
+  # --- agg_trip_zone_daily: the billable split, and the zero row ------------
+  - name: zone_daily_splits_billable_from_all_trips
+    description: >
+      A billable trip and a refund in the same zone-day give a two-trip count
+      with a net total, and a one-trip billable count with only the positive
+      amount. The all-trips measure is not narrowed by the billable rule.
+    model: agg_trip_zone_daily
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_date_key: 20240101, pickup_date: '2024-01-01', pickup_datetime: '2024-01-01 08:00:00', pickup_zone_key: ZK-1, is_billable: true, total_amount: 20.0, fare_amount: 15.0, tip_amount: 3.0, total_surcharges: 2.0, tolls_amount: 0.0, trip_distance: 4.0, driver_key: 1}
+          - {pickup_date_key: 20240101, pickup_date: '2024-01-01', pickup_datetime: '2024-01-01 09:00:00', pickup_zone_key: ZK-1, is_billable: false, total_amount: -5.0, fare_amount: -4.0, tip_amount: 0.0, total_surcharges: -1.0, tolls_amount: 0.0, trip_distance: 1.0, driver_key: 1}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: ZK-1, zone_natural_key: 132, zone_name: JFK Airport, borough_name: Queens, reporting_region: Airports}
+    expect:
+      rows:
+        - {pickup_date: '2024-01-01', pickup_location_id: 132, trip_count: 2, billable_trip_count: 1, total_revenue: 15.0, billable_total_revenue: 20.0, billable_fare_revenue: 15.0, billable_tip_revenue: 3.0, billable_surcharge_revenue: 2.0, billable_toll_revenue: 0.0, reporting_region: Airports}
+
+  - name: zone_daily_keeps_a_no_billable_zone_day_at_zero
+    description: >
+      A zone-day whose only trip is a refund keeps its row, with a zero billable
+      count and zero in every billable revenue column rather than a null, while
+      the all-trips measure still carries the refund.
+    model: agg_trip_zone_daily
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_date_key: 20240102, pickup_date: '2024-01-02', pickup_datetime: '2024-01-02 08:00:00', pickup_zone_key: ZK-2, is_billable: false, total_amount: -12.0, fare_amount: -10.0, tip_amount: 0.0, total_surcharges: -2.0, tolls_amount: 0.0, trip_distance: 2.0, driver_key: 2}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: ZK-2, zone_natural_key: 7, zone_name: Astoria, borough_name: Queens, reporting_region: Outer Boroughs}
+    expect:
+      rows:
+        - {pickup_date: '2024-01-02', pickup_location_id: 7, trip_count: 1, billable_trip_count: 0, total_revenue: -12.0, billable_total_revenue: 0.0, billable_fare_revenue: 0.0, billable_tip_revenue: 0.0, billable_surcharge_revenue: 0.0, billable_toll_revenue: 0.0}
+
+  - name: zone_daily_windows_run_over_consecutive_days
+    description: >
+      The lag and rolling columns read the zone's own days in date order: the
+      second day sees the first as its previous day, and the 28-day revenue
+      window at the second day is both days' totals.
+    model: agg_trip_zone_daily
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_date_key: 20240101, pickup_date: '2024-01-01', pickup_datetime: '2024-01-01 08:00:00', pickup_zone_key: ZK-3, is_billable: true, total_amount: 10.0, fare_amount: 8.0, tip_amount: 1.0, total_surcharges: 1.0, tolls_amount: 0.0, trip_distance: 2.0, driver_key: 3}
+          - {pickup_date_key: 20240102, pickup_date: '2024-01-02', pickup_datetime: '2024-01-02 08:00:00', pickup_zone_key: ZK-3, is_billable: true, total_amount: 10.0, fare_amount: 8.0, tip_amount: 1.0, total_surcharges: 1.0, tolls_amount: 0.0, trip_distance: 2.0, driver_key: 3}
+          - {pickup_date_key: 20240102, pickup_date: '2024-01-02', pickup_datetime: '2024-01-02 09:00:00', pickup_zone_key: ZK-3, is_billable: true, total_amount: 10.0, fare_amount: 8.0, tip_amount: 1.0, total_surcharges: 1.0, tolls_amount: 0.0, trip_distance: 2.0, driver_key: 3}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: ZK-3, zone_natural_key: 161, zone_name: Midtown Center, borough_name: Manhattan, reporting_region: Manhattan Core}
+    expect:
+      rows:
+        - {pickup_date: '2024-01-01', pickup_location_id: 161, trip_count: 1, prev_day_trip_count: null, revenue_28d_rolling: 10.0, billable_trip_count: 1}
+        - {pickup_date: '2024-01-02', pickup_location_id: 161, trip_count: 2, prev_day_trip_count: 1, revenue_28d_rolling: 30.0, billable_trip_count: 2}
