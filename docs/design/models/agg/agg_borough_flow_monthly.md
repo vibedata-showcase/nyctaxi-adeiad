@@ -26,6 +26,7 @@ One row per (pickup month, origin borough, destination borough). The month is th
 - `D-08` No ontology mapping. The table reaches Zone and Trip, both already mapped from the `nyc_taxi_trips` document; it introduces no concept and no new identity. Source: R-06; `ontology/nyc_taxi_analytics.mapping.yaml`.
 - `D-09` The relation carries an enforced dbt contract and an ODCS contract at `contracts/agg/agg_borough_flow_monthly.odcs.yaml`, because `repo-map.json` `contracts` puts every gold relation under contract. Source: R-06; `repo-map.json` `contracts`.
 - `D-10` Column set: `trip_month`, `trip_month_start_date`, `origin_borough`, `destination_borough`, `is_cross_borough`, `trip_count`, `total_revenue`, `origin_trip_count`, `cross_borough_trip_count`, `outbound_cross_borough_share`. `is_cross_borough` is derived from the two borough names, so a consumer can filter without string comparison. Source: R-02, R-04, R-05.
+- `D-12` `D-10` names two month columns, `trip_month` and `trip_month_start_date`, which would hold the same value: the month has one key, its first day. The published set is nine columns, with `trip_month` alone, typed `DATE` and equal to the first day of the pickup month. It is `DATE` rather than the `TIMESTAMP` the older finance marts carry, because a month is a date and a timestamp invites an accidental time comparison; the `agg` folder's other monthly models set the precedent for the month grain, and a consumer joins it to `dim_date.month_start_date`. Source: R-01; `dim_date.sql` `month_start_date` is the month level's key.
 - `D-11` Tests: `unique` and `not_null` on the composite grain through a surrogate-free uniqueness test, `not_null` on both boroughs and on the three measure columns, an accepted-values test on `origin_borough`/`destination_borough` against the borough master, and one singular test that each month's cells sum to the independently counted trips of that month's population. Source: R-05, R-07.
 
 ## Logical Model
@@ -59,3 +60,4 @@ ontology:
 ## History
 
 - 2026-11-25 — new-intent-5af98744 — created with the model, its population, its share and its exclusion route — D-01–D-11 — terms: added cross-borough trip
+- 2026-11-25 — new-intent-5af98744 — amended before planning: the month is one column, `trip_month` as a DATE on the first day, because `D-10` named a duplicate — D-12 — terms: none new
