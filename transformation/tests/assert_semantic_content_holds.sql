@@ -10,7 +10,9 @@ with s1_source as (
 select
     a.pickup_date as trips_to_date__day,
     a.pickup_location_id as trips_to_pickup_zone__zone,
-    sum(a.trip_count) as trip_count
+    sum(a.trip_count) as trip_count,
+    sum(a.billable_trip_count) as billable_trip_count,
+    sum(a.billable_total_revenue) as billable_revenue
 from {{ ref('agg_trip_zone_daily') }} as a
 group by 1, 2
 ),
@@ -19,7 +21,9 @@ s1_detail as (
 select
     d0.calendar_date as trips_to_date__day,
     d1.zone_natural_key as trips_to_pickup_zone__zone,
-    SUM(CASE WHEN NOT (f.trip_key) IS NULL THEN 1 ELSE 0 END) as trip_count
+    SUM(CASE WHEN NOT (f.trip_key) IS NULL THEN 1 ELSE 0 END) as trip_count,
+    SUM(CASE WHEN (f.is_billable) THEN 1 ELSE 0 END) as billable_trip_count,
+    SUM(CASE WHEN (f.is_billable) THEN (f.total_amount) ELSE 0 END) as billable_revenue
 from {{ ref('fct_trip') }} as f
 left join {{ ref('dim_date') }} as d0 on f.pickup_date_key = d0.date_key
 left join {{ ref('dim_zone') }} as d1 on f.pickup_zone_key = d1.zone_key
@@ -377,6 +381,22 @@ select 'trips.LTS2_zone_day_agg.trip_count at ' || coalesce(cast(coalesce(s.trip
     cast(d.trip_count as varchar) as detail_value
 from s1_source as s full join s1_detail as d on s.trips_to_date__day is not distinct from d.trips_to_date__day and s.trips_to_pickup_zone__zone is not distinct from d.trips_to_pickup_zone__zone
 where coalesce(s.trip_count, 0) is distinct from coalesce(d.trip_count, 0)
+
+union all
+
+select 'trips.LTS2_zone_day_agg.billable_trip_count at ' || coalesce(cast(coalesce(s.trips_to_date__day, d.trips_to_date__day) as varchar), '') || '|' || coalesce(cast(coalesce(s.trips_to_pickup_zone__zone, d.trips_to_pickup_zone__zone) as varchar), '') as binding,
+    cast(s.billable_trip_count as varchar) as source_value,
+    cast(d.billable_trip_count as varchar) as detail_value
+from s1_source as s full join s1_detail as d on s.trips_to_date__day is not distinct from d.trips_to_date__day and s.trips_to_pickup_zone__zone is not distinct from d.trips_to_pickup_zone__zone
+where coalesce(s.billable_trip_count, 0) is distinct from coalesce(d.billable_trip_count, 0)
+
+union all
+
+select 'trips.LTS2_zone_day_agg.billable_revenue at ' || coalesce(cast(coalesce(s.trips_to_date__day, d.trips_to_date__day) as varchar), '') || '|' || coalesce(cast(coalesce(s.trips_to_pickup_zone__zone, d.trips_to_pickup_zone__zone) as varchar), '') as binding,
+    cast(s.billable_revenue as varchar) as source_value,
+    cast(d.billable_revenue as varchar) as detail_value
+from s1_source as s full join s1_detail as d on s.trips_to_date__day is not distinct from d.trips_to_date__day and s.trips_to_pickup_zone__zone is not distinct from d.trips_to_pickup_zone__zone
+where ((coalesce(s.billable_revenue, 0) is null) <> (coalesce(d.billable_revenue, 0) is null) or abs(coalesce(s.billable_revenue, 0) - coalesce(d.billable_revenue, 0)) > 0.01)
 
 union all
 
