@@ -26,3 +26,6 @@ The consequence is deliberate and bounded. `agg_od_flow_matrix` answers "which f
 ## Affected designs
 
 - [`models/agg/agg_od_flow_matrix.md`](../design/models/agg/agg_od_flow_matrix.md)
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
+
+This ADR's line between zone grain and borough grain is drawn in [ADR 0018](./0018-the-25-trip-floor-governs-zone-grain-flows-not-borough-grain-ones.md); the floor itself is unchanged.

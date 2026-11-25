@@ -1,0 +1,109 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: 3c1f2b64-9a17-4c8e-b0d5-6e2a7f14c9d3
+name: agg_borough_flow_monthly
+version: 0.1.0
+status: active
+servers:
+  - server: sample-nyctaxi-comp
+    type: duckdb
+    database: domain.duckdb
+    schema: agg
+schema:
+  - name: agg_borough_flow_monthly
+    properties:
+      - name: month_start_date
+        logicalType: date
+        physicalType: DATE
+        primaryKey: true
+        required: true
+        description: "First day of the calendar month the trips were picked up in."
+      - name: origin_borough
+        logicalType: string
+        physicalType: VARCHAR
+        primaryKey: true
+        required: true
+        description: "Borough of the pickup zone. 'Unknown' and 'N/A' are unresolved boroughs, kept as their own group (ADR 0012)."
+      - name: dest_borough
+        logicalType: string
+        physicalType: VARCHAR
+        primaryKey: true
+        required: true
+        description: "Borough of the dropoff zone, on the same unresolved convention as the origin."
+      - name: is_cross_borough
+        logicalType: boolean
+        physicalType: BOOLEAN
+        required: true
+        description: "True when the destination borough differs from the origin borough. Read it only on rows whose origin and destination are both resolved: a null borough is not a borough."
+      - name: is_origin_borough_resolved
+        logicalType: boolean
+        physicalType: BOOLEAN
+        required: true
+        description: "False when the pickup zone is unresolved or has no zone, so the origin group is not a real borough."
+      - name: is_dest_borough_resolved
+        logicalType: boolean
+        physicalType: BOOLEAN
+        required: true
+        description: "False when the dropoff zone is unresolved or has no zone. Such a trip is published as its own row but is excluded from its origin's cross-borough share."
+      - name: trip_count
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+        description: "Billable trips picked up in the month that ran from the origin borough to the destination borough."
+      - name: trips_with_revenue
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+        description: "Trips on the pair that carry a total amount, the population total_revenue sums. Published beside the revenue so a reader can see how much traffic the figure speaks for."
+      - name: total_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: "Sum of total_amount over the pair's billable trips, so no-charge and dispute payments count (ADR 0013)."
+      - name: origin_trip_count
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+        description: "All billable trips that started in the origin borough in the month, whatever their destination. Repeated on every row of that origin and month, so it is a denominator, not a measure."
+      - name: origin_resolved_trip_count
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+        description: "The origin borough's trips whose destination borough is resolved: the denominator of cross_borough_share. Repeated on every row of that origin and month."
+      - name: origin_unresolved_trip_count
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+        description: "The origin borough's trips whose destination borough is unresolved, left out of the share. origin_resolved_trip_count plus this equals origin_trip_count."
+      - name: cross_borough_trip_count
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+        description: "The origin borough's trips in the month that ended in a different, resolved borough. The numerator of cross_borough_share, repeated on every row of that origin and month."
+      - name: cross_borough_share
+        logicalType: number
+        physicalType: DOUBLE
+        description: "Share of the origin borough's trips that left it: cross_borough_trip_count over origin_resolved_trip_count, null when that denominator is zero. A share of a borough, so the boroughs' shares do not sum to one."
