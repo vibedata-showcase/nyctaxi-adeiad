@@ -188,7 +188,7 @@ models:
       - name: trip_count
         data_type: BIGINT
         data_tests: [not_null]
-        description: Billable trips picked up in the month that ran from origin_borough to dest_borough.
+        description: '{{ doc("borough_flow_trip_count") }}'
       - name: total_revenue
         data_type: DOUBLE
         data_tests: [not_null]

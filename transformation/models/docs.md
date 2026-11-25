@@ -55,3 +55,13 @@ This is a property of the business, not missing data. `is_fleet_attributed`
 states it explicitly so that no consumer has to infer it from a null, and so
 that a fleet-level denominator is never taken over the whole fact.
 {% enddocs %}
+
+{% docs borough_flow_trip_count %}
+Billable trips picked up in the month that ran from the origin borough to the
+destination borough.
+
+The column is named `trip_count` to match the pair's own count in the contract,
+but the population is the billable one (ADR 0003), not every trip: this table is
+a flow surface, and a refund or void is not traffic that crossed a borough line.
+The semantic layer binds the `billable_trip_count` metric to it for that reason.
+{% enddocs %}
