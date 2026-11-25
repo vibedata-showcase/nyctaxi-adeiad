@@ -147,6 +147,10 @@
     {
       "relation": "core.dim_fare_regime",
       "reason": "No join key into any star: no fact carries a fare-regime key, so it cannot be a conformed dimension."
+    },
+    {
+      "relation": "agg.agg_borough_flow_monthly",
+      "reason": "Its population is not statable from the trips dataset's own fields: it is billable trips whose pickup and dropoff zones are both in an NYC borough, and borough membership lives in dim_zone, not on the fact, so no content_filter can declare the subset. Its outbound_cross_borough_share also divides by its origin month's trips, so it is not additive across rows. ADR 0018 publishes the complete 5 x 5 grid with no trip floor, so the table is a filtered population and a repeating denominator rather than an aggregate source."
     }
   ],
   "sources": {

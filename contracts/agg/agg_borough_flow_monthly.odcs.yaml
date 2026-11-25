@@ -3,7 +3,7 @@ kind: DataContract
 id: 3008f11f-c3c2-4fd8-9cba-1b629522af41
 name: agg_borough_flow_monthly
 version: 1.0.0
-status: proposed
+status: active
 servers:
   - server: sample-nyctaxi-comp
     type: duckdb
@@ -100,11 +100,6 @@ schema:
             metric: nullValues
             mustBe: 0
       - name: outbound_cross_borough_share
-        description: "Share of the origin borough's trips in the month that left it, as a fraction between 0 and 1: cross_borough_trip_count over origin_trip_count. Repeated on every destination row of that origin month, so it is not additive across rows."
+        description: "Share of the origin borough's trips in the month that left it, as a fraction between 0 and 1: cross_borough_trip_count over origin_trip_count. Repeated on every destination row of that origin month, so it is not additive across rows. Null when the origin borough had no billable trips that month, since the share is then undefined rather than zero."
         logicalType: number
         physicalType: DOUBLE
-        required: true
-        quality:
-          - type: library
-            metric: nullValues
-            mustBe: 0

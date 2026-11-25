@@ -539,3 +539,52 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+  - name: agg_borough_flow_monthly
+    description: >
+      Borough-to-borough movement for one pickup month over the five NYC
+      boroughs. Every origin-destination cell is published, including the cells
+      with no trips, so the grid is complete and no pair is suppressed for being
+      thin (ADR 0018). The population is billable trips whose pickup zone and
+      dropoff zone are both in an NYC borough (ADR 0003), so trips touching an
+      unresolved zone or a place outside the city are outside the grid and
+      outside every share and total it carries (ADR 0012). The share is an
+      origin-month figure repeated on each of its destination rows, so it is
+      never summed across rows; its numerator and denominator are published
+      beside it.
+    contract: {enforced: true}
+    columns:
+      - name: trip_month
+        data_type: DATE
+        description: First day of the pickup month the row reports; the month's key, and the level a consumer joins to the calendar.
+        data_tests: [not_null]
+      - name: origin_borough
+        data_type: VARCHAR
+        description: Borough of the pickup zone, one of the five NYC boroughs.
+        data_tests: [not_null, {accepted_values: {arguments: {values: [Manhattan, Bronx, Brooklyn, Queens, Staten Island]}}}]
+      - name: destination_borough
+        data_type: VARCHAR
+        description: Borough of the dropoff zone, one of the five NYC boroughs.
+        data_tests: [not_null, {accepted_values: {arguments: {values: [Manhattan, Bronx, Brooklyn, Queens, Staten Island]}}}]
+      - name: is_cross_borough
+        data_type: BOOLEAN
+        description: True when the trip leaves the borough it started in, so origin and destination differ.
+        data_tests: [not_null]
+      - name: trip_count
+        data_type: BIGINT
+        description: Billable trips from the origin borough to the destination borough in the month; zero for a cell with no such trip.
+        data_tests: [not_null]
+      - name: total_revenue
+        data_type: DOUBLE
+        description: Sum of total_amount over the cell's billable trips, in USD; zero for a cell with no such trip.
+        data_tests: [not_null]
+      - name: origin_trip_count
+        data_type: BIGINT
+        description: 'Billable trips that started in the origin borough in the month, over every destination: the denominator of the share, published so a reader can judge how many trips a share rests on.'
+        data_tests: [not_null]
+      - name: cross_borough_trip_count
+        data_type: BIGINT
+        description: 'Billable trips that started in the origin borough in the month and ended in another borough: the numerator of the share.'
+        data_tests: [not_null]
+      - name: outbound_cross_borough_share
+        data_type: DOUBLE
+        description: 'Share of the origin borough''s trips in the month that left it, as a fraction between 0 and 1: cross_borough_trip_count over origin_trip_count. Repeated on every destination row of that origin month, so it is not additive across rows. Null when the origin borough had no billable trips that month, since the share is then undefined rather than zero.'

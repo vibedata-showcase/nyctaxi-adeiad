@@ -1,0 +1,121 @@
+version: 2
+
+unit_tests:
+  # --- agg_borough_flow_monthly: the spine, the filters and the share --------
+  - name: borough_flow_zero_fills_a_cell_with_no_trips
+    description: A month with one trip still publishes all four cells of a two-borough grid, and the three with no trips read zero rather than vanishing.
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-05'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: z1, borough_name: Manhattan, is_nyc: true}
+          - {zone_key: z2, borough_name: Queens, is_nyc: true}
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_zone_key: z1, dropoff_zone_key: z1, pickup_datetime: '2024-01-05 10:00:00', is_billable: true, total_amount: 20.0}
+    expect:
+      rows:
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, destination_borough: Manhattan, is_cross_borough: false, trip_count: 1, total_revenue: 20.0, origin_trip_count: 1, cross_borough_trip_count: 0, outbound_cross_borough_share: 0.0}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, destination_borough: Queens, is_cross_borough: true, trip_count: 0, total_revenue: 0.0, origin_trip_count: 1, cross_borough_trip_count: 0, outbound_cross_borough_share: 0.0}
+        - {trip_month: '2024-01-01', origin_borough: Queens, destination_borough: Manhattan, is_cross_borough: true, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}
+        - {trip_month: '2024-01-01', origin_borough: Queens, destination_borough: Queens, is_cross_borough: false, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}
+
+  - name: borough_flow_share_is_the_whole_origin_month
+    description: The share divides by every trip that started in the origin borough, so a row carrying one of four trips reads 25% and the cross-borough count is the same on both of that origin's rows.
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-05'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: z1, borough_name: Manhattan, is_nyc: true}
+          - {zone_key: z2, borough_name: Queens, is_nyc: true}
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_zone_key: z1, dropoff_zone_key: z1, pickup_datetime: '2024-01-05 10:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: z1, dropoff_zone_key: z1, pickup_datetime: '2024-01-06 10:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: z1, dropoff_zone_key: z1, pickup_datetime: '2024-01-07 10:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: z1, dropoff_zone_key: z2, pickup_datetime: '2024-01-08 10:00:00', is_billable: true, total_amount: 30.0}
+    expect:
+      rows:
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, destination_borough: Manhattan, is_cross_borough: false, trip_count: 3, total_revenue: 30.0, origin_trip_count: 4, cross_borough_trip_count: 1, outbound_cross_borough_share: 0.25}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, destination_borough: Queens, is_cross_borough: true, trip_count: 1, total_revenue: 30.0, origin_trip_count: 4, cross_borough_trip_count: 1, outbound_cross_borough_share: 0.25}
+        - {trip_month: '2024-01-01', origin_borough: Queens, destination_borough: Manhattan, is_cross_borough: true, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}
+        - {trip_month: '2024-01-01', origin_borough: Queens, destination_borough: Queens, is_cross_borough: false, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}
+
+  - name: borough_flow_excludes_an_end_outside_an_nyc_borough
+    description: A trip whose destination zone is not an NYC borough is outside the grid, so it neither adds a cell nor enters the origin's denominator.
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-05'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: z1, borough_name: Manhattan, is_nyc: true}
+          - {zone_key: z2, borough_name: Queens, is_nyc: true}
+          - {zone_key: z9, borough_name: EWR, is_nyc: false}
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_zone_key: z1, dropoff_zone_key: z1, pickup_datetime: '2024-01-05 10:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: z1, dropoff_zone_key: z9, pickup_datetime: '2024-01-05 11:00:00', is_billable: true, total_amount: 99.0}
+    expect:
+      rows:
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, destination_borough: Manhattan, trip_count: 1, total_revenue: 10.0, origin_trip_count: 1, cross_borough_trip_count: 0, outbound_cross_borough_share: 0.0}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, destination_borough: Queens, trip_count: 0, total_revenue: 0.0, origin_trip_count: 1, cross_borough_trip_count: 0, outbound_cross_borough_share: 0.0}
+        - {trip_month: '2024-01-01', origin_borough: Queens, destination_borough: Manhattan, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}
+        - {trip_month: '2024-01-01', origin_borough: Queens, destination_borough: Queens, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}
+
+  - name: borough_flow_excludes_a_non_billable_trip
+    description: A trip with a non-positive total is not a flow anyone paid for (ADR 0003), so it is absent from the cell and from the origin's denominator.
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-05'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: z1, borough_name: Manhattan, is_nyc: true}
+          - {zone_key: z2, borough_name: Queens, is_nyc: true}
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_zone_key: z1, dropoff_zone_key: z2, pickup_datetime: '2024-01-05 10:00:00', is_billable: true, total_amount: 40.0}
+          - {pickup_zone_key: z1, dropoff_zone_key: z2, pickup_datetime: '2024-01-05 11:00:00', is_billable: false, total_amount: -40.0}
+    expect:
+      rows:
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, destination_borough: Manhattan, trip_count: 0, total_revenue: 0.0, origin_trip_count: 1, cross_borough_trip_count: 1, outbound_cross_borough_share: 1.0}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, destination_borough: Queens, trip_count: 1, total_revenue: 40.0, origin_trip_count: 1, cross_borough_trip_count: 1, outbound_cross_borough_share: 1.0}
+        - {trip_month: '2024-01-01', origin_borough: Queens, destination_borough: Manhattan, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}
+        - {trip_month: '2024-01-01', origin_borough: Queens, destination_borough: Queens, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}
+
+  - name: borough_flow_keeps_months_apart
+    description: Two months with the same origin and destination are two rows, and each month's share divides by that month's trips only.
+    model: agg_borough_flow_monthly
+    given:
+      - input: ref('dim_date')
+        rows:
+          - {calendar_date: '2024-01-05'}
+          - {calendar_date: '2024-02-05'}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: z1, borough_name: Manhattan, is_nyc: true}
+          - {zone_key: z2, borough_name: Queens, is_nyc: true}
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_zone_key: z1, dropoff_zone_key: z1, pickup_datetime: '2024-01-05 10:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: z1, dropoff_zone_key: z1, pickup_datetime: '2024-01-06 10:00:00', is_billable: true, total_amount: 10.0}
+          - {pickup_zone_key: z1, dropoff_zone_key: z2, pickup_datetime: '2024-02-05 10:00:00', is_billable: true, total_amount: 30.0}
+    expect:
+      rows:
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, destination_borough: Manhattan, trip_count: 2, total_revenue: 20.0, origin_trip_count: 2, cross_borough_trip_count: 0, outbound_cross_borough_share: 0.0}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, destination_borough: Queens, trip_count: 0, total_revenue: 0.0, origin_trip_count: 2, cross_borough_trip_count: 0, outbound_cross_borough_share: 0.0}
+        - {trip_month: '2024-01-01', origin_borough: Queens, destination_borough: Manhattan, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}
+        - {trip_month: '2024-01-01', origin_borough: Queens, destination_borough: Queens, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}
+        - {trip_month: '2024-02-01', origin_borough: Manhattan, destination_borough: Manhattan, trip_count: 0, total_revenue: 0.0, origin_trip_count: 1, cross_borough_trip_count: 1, outbound_cross_borough_share: 1.0}
+        - {trip_month: '2024-02-01', origin_borough: Manhattan, destination_borough: Queens, trip_count: 1, total_revenue: 30.0, origin_trip_count: 1, cross_borough_trip_count: 1, outbound_cross_borough_share: 1.0}
+        - {trip_month: '2024-02-01', origin_borough: Queens, destination_borough: Manhattan, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}
+        - {trip_month: '2024-02-01', origin_borough: Queens, destination_borough: Queens, trip_count: 0, total_revenue: 0.0, origin_trip_count: 0, cross_borough_trip_count: 0, outbound_cross_borough_share: null}

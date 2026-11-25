@@ -85,14 +85,22 @@
         "transformation/tests/assert_daypart_cube_one_row_per_grain.sql",
         "transformation/tests/assert_compound_rates_equal_their_ratio.sql",
         "transformation/tests/assert_aggs_cover_every_trip.sql",
-        "transformation/tests/assert_od_flow_floor.sql"
+        "transformation/tests/assert_od_flow_floor.sql",
+        "transformation/tests/assert_borough_matrix_one_row_per_grain.sql",
+        "transformation/tests/assert_borough_matrix_covers_every_trip.sql",
+        "transformation/tests/assert_borough_share_recomputes.sql"
       ],
       "selectors": {
-        "data": "path:models/marts/agg"
+        "data": "path:models/marts/agg",
+        "unit": "path:models/marts/agg"
       },
       "commands": {
-        "data": "cd transformation && dbt test --select path:models/marts/agg --exclude test_type:unit"
-      }
+        "data": "cd transformation && dbt test --select path:models/marts/agg --exclude test_type:unit",
+        "unit": "cd transformation && dbt test --select path:models/marts/agg,test_type:unit"
+      },
+      "unit": [
+        "transformation/models/marts/agg/_unit_tests.yml"
+      ]
     },
     "finance": {
       "sources": [
@@ -167,7 +175,7 @@
       ],
       "commands": {
         "unit": "python3 -m pytest tests/test_ossie_validate.py tests/test_ossie_compile.py -q",
-        "structural": "python3 .agents/skills/semantic-model/scripts/ossie.py validate logical-model/ && python3 .agents/skills/semantic-model/scripts/ossie.py coverage logical-model/ transformation/models/marts/core transformation/models/marts/agg transformation/models/marts/finance transformation/models/marts/ops --exclude agg.agg_od_flow_matrix --exclude finance.mart_revenue_component_bridge --exclude core.dim_fare_regime && python3 .agents/skills/semantic-model/scripts/ossie.py suppliers logical-model/ && python3 .agents/skills/semantic-model/scripts/ossie.py notes logical-model/ transformation/tests docs/adr && python3 .agents/skills/semantic-model/scripts/ossie.py generate-tests logical-model/ transformation/tests --check"
+        "structural": "python3 .agents/skills/semantic-model/scripts/ossie.py validate logical-model/ && python3 .agents/skills/semantic-model/scripts/ossie.py coverage logical-model/ transformation/models/marts/core transformation/models/marts/agg transformation/models/marts/finance transformation/models/marts/ops --exclude agg.agg_od_flow_matrix --exclude finance.mart_revenue_component_bridge --exclude core.dim_fare_regime --exclude agg.agg_borough_flow_monthly && python3 .agents/skills/semantic-model/scripts/ossie.py suppliers logical-model/ && python3 .agents/skills/semantic-model/scripts/ossie.py notes logical-model/ transformation/tests docs/adr && python3 .agents/skills/semantic-model/scripts/ossie.py generate-tests logical-model/ transformation/tests --check"
       }
     },
     "ontology": {
