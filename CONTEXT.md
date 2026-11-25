@@ -74,7 +74,11 @@ A range of distance, duration or fare used to profile trips.
 The trips between one pickup zone and one dropoff zone.
 
 **Published flow**:
-An origin-destination pair with at least 25 billable trips in the reporting window, the population the origin-destination matrix reports (ADR 0017). Narrower than a flow: a pair below the floor exists in the trips but is not published.
+An origin-destination pair a flow surface reports. The population is a property of the surface, not of the word: at zone-pair grain a pair is published from 25 billable trips in the reporting window (ADR 0017), and at borough grain every observed pair is published (ADR 0018). Narrower than a flow: a pair a surface's rule excludes exists in the trips but is not published.
+
+**Cross-borough share**:
+The share of an origin borough's trips in a period whose destination borough is a different one, counted with unresolved and out-of-state destinations as different (ADR 0019). It is measured over the trips the same surface publishes, so its rows sum to it.
+_Not_: outbound rate, because it names a rate of leaving rather than a share of a population, and the population is what a reader has to know.
 
 **Medallion**:
 The licence to operate a taxi. It is transferable: the licence outlives the vehicle it currently covers and the driver who currently holds it, so it is neither of them.
