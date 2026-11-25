@@ -1,5 +1,62 @@
 # Verification: Zone revenue report from operations figures 2
 
+## Verification
+
+`verdict: verified` at `e1df964`: the daily zone revenue report is built from `agg_trip_zone_daily` and no longer aggregates `fct_trip`; every published cell matches the shipped relation row for row at the cent; the finance team's Q1 2024 check figures of 95,958 trips and 2,629,185.82 revenue, and 4,120 trips and 337,711.05 for JFK Airport, are met exactly.
+
+One finding is open and outside this intent's scope: `mart_monthly_service_summary`'s `trip_count` carries the same wrong description this intent corrected on the report (`R-07`'s defect class, in a model the Requirement put out of scope). Reported, not fixed.
+
+## Coverage
+
+| Item | Evidence | Result | At |
+| --- | --- | --- | --- |
+| `R-01` The report is built from the operations figures, not a second aggregation | `dbt ls --select 1+mart_daily_zone_revenue --resource-type model --exclude mart_daily_zone_revenue` | exit 0; exactly `agg_trip_zone_daily` — one direct model dependency. At two hops the closure reaches `fct_trip` and `dim_zone` only through that aggregate; the report's SQL joins neither. | `e1df964` |
+| `R-02` The aggregate carries the billable measures and zone attributes the report needs | `dbt build --select +agg_trip_zone_daily+ mart_daily_zone_revenue --exclude test_type:unit`; `describe select * from agg.agg_trip_zone_daily` | exit 0; PASS=106 WARN=1 ERROR=0 of 107. The aggregate publishes `billable_trip_count`, `billable_revenue` and the four billable components plus `reporting_region`; the report produces all eleven of its columns from it alone. Existing columns held still: 7,997 rows, 97,184 trips, 2,597,120.92 revenue, 262 zones, `total_miles`, `attributed_driver_count`, `revenue_28d_rolling`, `prev_day_trip_count`, `same_day_last_week_trip_count`, `trip_count_7d_avg` and `revenue_rank_that_day` all equal `domain` to float last-bit noise. | `e1df964` |
+| `R-03` Q1 2024 whole-report totals are 95,958 trips and 2,629,185.82 revenue | `dbt show --inline "select sum(trip_count) …, round(sum(total_revenue),2) … from {{ ref('mart_daily_zone_revenue') }} where trip_date >= '2024-01-01' and trip_date < '2024-04-01'"` | 95,958 trips, 2,629,185.82 revenue, 7,961 rows — exactly the figures the finance team checks. | `e1df964` |
+| `R-04` Q1 2024 JFK Airport is 4,120 trips and 337,711.05 revenue | the same query restricted to `zone_name = 'JFK Airport'` | 4,120 trips, 337,711.05 revenue — exactly. | `e1df964` |
+| `R-05` No cell of the report changes | full outer join of `domain.finance.mart_daily_zone_revenue` against the rebuilt sandbox relation on `(trip_date, pickup_location_id)`, money compared at the cent, `is distinct from` on every other column | 7,961 shipped, 7,961 rebuilt, 7,961 matched, 0 only-in-shipped, 0 only-in-rebuilt, and 0 differences on `trip_count`, `fare_revenue`, `tip_revenue`, `surcharge_revenue`, `toll_revenue`, `total_revenue`, `borough`, `zone_name`, `reporting_region`. Independent recomputation stands in for a golden baseline, and there is none configured. | `e1df964` |
+| `R-06` Published shape unchanged | `information_schema.columns` on both relations; `odcs.py check`; `assert_semantic_content_holds` | 11 columns with identical names, types and ordinal positions (`trip_date` DATE 1 … `toll_revenue` DOUBLE 11), matching the enforced contract. Contract check exit 0; the semantic content test passes, so the `LTS7_daily_zone_revenue` binding still holds on data. | `e1df964` |
+| `R-07` `trip_count`'s description matches what is published | read of `_finance.yml`, `docs.md` and the rendered docs; `odcs.py check` | The description now states the billable population. It is a `{{ doc("billable_trip_count") }}` pointer because `odcs.py generate` owns that key and reverts any other text (observed with a sentinel probe); `check` exits 0 with the pointer in place. | `e1df964` |
+| Scope row: `agg_trip_zone_daily` (SQL, `_agg.yml`) | `dbt build --select agg_trip_zone_daily --exclude test_type:unit`; `dbt test --select agg_trip_zone_daily,test_type:unit` | exit 0; PASS=7 WARN=1; unit tests PASS=2 of 2. `assert_zone_daily_one_row_per_grain` proves the grain (0 groups with more than one row); `assert_zone_daily_billable_within_total` proves the billable count is a subset and the billable revenue never below the all-trip total. | `e1df964` |
+| Scope row: `contracts/agg/agg_trip_zone_daily.odcs.yaml` | `odcs.py check`; `odcs.py diff origin/main`; `odcs.py profile --relation agg.agg_trip_zone_daily --catalog <sandbox>` | check exit 0; diff reports 7 `diff/additive` and no version defect (1.0.1 → 1.1.0); profile returns `[]` — every declared claim holds, and `reporting_region`, `billable_trip_count` and `billable_revenue` carry `not_null`. | `e1df964` |
+| Scope row: `assert_zone_daily_one_row_per_grain` | that test | exit 0, returns no rows over all 7,997 zone-days. | `e1df964` |
+| Scope row: `assert_zone_daily_billable_within_total` | that test | exit 0, returns no rows. | `e1df964` |
+| Scope row: `mart_daily_zone_revenue` (SQL, `_finance.yml`) | `dbt build --select mart_daily_zone_revenue --exclude test_type:unit` | exit 0; PASS=6 WARN=1 ERROR=0. | `e1df964` |
+| Scope row: `contracts/finance/mart_daily_zone_revenue.odcs.yaml` | `odcs.py check`; `odcs.py diff origin/main`; `odcs.py profile --relation finance.mart_daily_zone_revenue --catalog <sandbox>` | check exit 0; diff reports one `diff/descriptive` and no version defect (1.0.1 → 1.0.2); profile returns one `profile/unchecked` — the `pickup_location_id` → `dim_zone.zone_natural_key` claim, which the contract cannot check because it declares no `dim_zone` schema. That claim is enforced instead by the `relationships` dbt test, which passes. | `e1df964` |
+| Scope row: `assert_revenue_report_matches_zone_daily` | that test | exit 0, returns no rows: every cell of the report equals the aggregate's billable cell for the same zone and day at the cent. | `e1df964` |
+| Scope row: `logical-model/nyc_taxi_analytics.ossie.yaml` | `ossie.py validate` / `coverage` / `suppliers` / `notes` / `generate-tests --check`; `validating-semantic-model` | All exit 0: 34 models on disk, 31 named, 0 coverage errors; 0 unsupplied items; 0 dangling pointers; 0 stale tests. Verdict **passes**. Two `bindings/unproven` warnings on `LTS7_daily_zone_revenue` are honest and recorded in its note: the mart inherits the aggregation rather than computing it, so the static trace stops one relation upstream; `assert_semantic_content_holds` holds the binding on data. | `e1df964` |
+| Scope row: regenerated semantic tests | `ossie.py generate-tests … --check` | exit 0, 0 stale — 3 generated tests, none changed by this intent. | `e1df964` |
+
+## Gate results
+
+| Gate | Command | Exit | Outcome |
+| --- | --- | --- | --- |
+| Data and unit tests on the selection | `dbt build --select +agg_trip_zone_daily+ mart_daily_zone_revenue --exclude test_type:unit --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass — PASS=106 WARN=1 ERROR=0 of 107. The warning is `assert_semantic_levels_hold`'s single `trips.LTS5_weather_borough_daily: trips_to_pickup_zone borough key is no member` row for the `unresolved` sentinel, which that source's own note documents as a data finding. |
+| Sandbox destination | `assert_dbt_destination.py` | 0 | pass — 24 built relations landed in the sandbox; none outside it. |
+| Unit tests on the selection | `dbt test --select +agg_trip_zone_daily+ mart_daily_zone_revenue,test_type:unit` | 0 | pass — PASS=87 WARN=1 ERROR=0 of 88, same warning. |
+| Project audit (`dbt_project_evaluator` installed) | `dbt build --select package:dbt_project_evaluator --vars '{dbt_project_evaluator_enabled: true}' --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass — PASS=66 WARN=12 ERROR=0 of 78. No error-severity finding. `fct_missing_primary_key_tests` names both changed models among 20: neither has ever declared a single-column primary key test, because both grains are composite, and the grain is held by a singular test instead. Pre-existing pattern, not a regression. |
+| Semantic model structure | `ossie.py validate logical-model/` | 0 | pass |
+| Semantic model coverage | `ossie.py coverage logical-model/ transformation/models/marts/{core,agg,finance,ops} --exclude agg.agg_od_flow_matrix --exclude finance.mart_revenue_component_bridge --exclude core.dim_fare_regime` | 0 | pass — 34 on disk, 31 named, 0 coverage errors |
+| Semantic model suppliers | `ossie.py suppliers logical-model/` | 0 | pass — 0 unsupplied items |
+| Semantic model notes | `ossie.py notes logical-model/ transformation/tests docs/adr` | 0 | pass — 0 dangling pointers |
+| Semantic tests not stale | `ossie.py generate-tests logical-model/ transformation/tests --check` | 0 | pass — 0 stale |
+| Semantic bindings | `ossie.py bindings logical-model/ transformation/target/manifest.json` | 0 | pass with 2 warnings — both `bindings/unproven` on `LTS7_daily_zone_revenue`, honest for an inherited aggregation, recorded in its note and held on data by `assert_semantic_content_holds` |
+| Semantic columns | `ossie.py columns logical-model/ transformation/target/catalog.json` | 0 | pass with 5 warnings — all `columns/datatype-mismatch`, all pre-existing, all in fields this intent did not touch (`trips.total_amount`, `trips.fare_residual`, `shift.gross_revenue`, `maintenance.cost_usd`, `vehicle.maintenance_cost_usd`), each `Decimal` against a `DOUBLE`/`BIGINT`/`HUGEINT` column |
+| Data contract check | `odcs.py check` | 0 | pass — no non-info finding |
+| Data contract diff | `odcs.py diff origin/main` | 0 | pass — 7 `diff/additive` on the aggregate (the version moves 1.0.1 → 1.1.0) and 1 `diff/descriptive` on the report (1.0.1 → 1.0.2); no `diff/version-not-bumped` |
+| Data contract relations | `odcs.py check --relations --catalog transformation/target/catalog.json` | 0 | pass for both contracts in scope (zero `relations/mismatch` naming either); 6 `relations/mismatch` errors name only the three ingestion `audit_runs`/`audit_table_loads` contracts, which are dlt-landed tables outside the dbt catalog and outside this intent |
+| Data contract profile, aggregate | `odcs.py profile --relation agg.agg_trip_zone_daily --catalog <sandbox db>` | 0 | pass — `[]`, every declared claim holds on the built relation |
+| Data contract profile, report | `odcs.py profile --relation finance.mart_daily_zone_revenue --catalog <sandbox db>` | 0 | pass with one `profile/unchecked` — the cross-relation `pickup_location_id` claim, uncheckable from this contract alone and enforced by its passing `relationships` dbt test |
+| Contract unit tests | `python3 -m pytest tests/test_odcs_contracts.py -q` | 0 | pass — 7 passed |
+| Ossie unit tests | `python3 -m pytest tests/test_ossie_validate.py tests/test_ossie_compile.py -q` | 0 | pass — 142 passed |
+| Map and ADR-link tests | `python3 -m pytest tests/test_maps.py tests/test_adr_links.py -q` | 0 | pass — 33 passed |
+| ADR lint | `python3 .github/scripts/adr_lint.py` | 0 | pass — no duplicate numbers, no dangling references |
+| Python lint | `ruff check .` | 0 | pass — all checks passed |
+| SQL lint | `sqlfluff lint transformation/models` | 0 | pass |
+| Python tests | `python3 -m pytest tests -q` | 0 | pass — 223 passed |
+| Baseline cross-check | not applicable | - | not run — this platform publishes no production manifest, so no baseline selection exists. |
+| Dev-artifact scan | `git diff 1184020..e1df964` inspection | 0 | pass — no `dev_mode`, no hard-coded `.add_limit()`, no environment id, no edited profile target. |
+
 ## Discovery
 
 <!-- Written by designing: each discovery result, and any slice with its limits. Keep as found. -->
