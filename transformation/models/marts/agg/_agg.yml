@@ -547,45 +547,58 @@ models:
       thin destination is a row and no minimum-trip rule trims the population
       (ADR 0018). A destination whose borough the TLC cannot resolve, and the
       out-of-state one, are rows of their own and count as crossings (ADR 0019).
-      The rows of one origin-month sum to its origin_trip_count, and the share
-      is that month's crossing trips over all of them. Built from fct_trip with
-      dim_zone joined twice.
+      The rows of one origin-month sum to its origin_billable_trip_count, and the
+      share is that month's crossing trips over all of them. Built from fct_trip
+      with dim_zone joined twice, so every count here is of billable trips.
     access: public
+    contract: {enforced: true}
     columns:
       - name: trip_month
+        data_type: DATE
         description: First day of the calendar month the trips were picked up in.
+        data_tests: [not_null]
       - name: origin_borough
+        data_type: VARCHAR
         description: Borough of the pickup zone, as of the trip's date.
       - name: dest_borough
+        data_type: VARCHAR
         description: >
           Borough of the dropoff zone, as of the trip's date. The unresolved
           groups and the out-of-state one appear here as their own values.
       - name: is_cross_borough
+        data_type: BOOLEAN
         description: >
           True when the destination borough differs from the origin borough, so
           the trip left the borough it started in. A destination that is
           unresolved or out of state is a different borough for this purpose.
-      - name: trip_count
-        description: >
-          Billable trips picked up in the month that travelled from the origin
-          borough to the destination borough. Never zero.
-      - name: total_revenue
-        description: >
-          Sum of total_amount over those billable trips; not restricted to the
-          payment methods that count as revenue.
-      - name: cross_borough_trip_count
+        data_tests: [not_null]
+      - name: billable_trip_count
+        data_type: BIGINT
+        description: Trips whose total amount is positive.
+        data_tests: [not_null]
+      - name: billable_revenue
+        data_type: DOUBLE
+        description: Total amount charged on billable trips. Excludes cash tips.
+        data_tests: [not_null]
+      - name: cross_borough_billable_trip_count
+        data_type: BIGINT
         description: >
           Billable trips that left the origin borough during the month, over
           every destination. The same value on each of the origin-month's rows,
           so it is not additive across them; it is the numerator of the share.
-      - name: origin_trip_count
+        data_tests: [not_null]
+      - name: origin_billable_trip_count
+        data_type: BIGINT
         description: >
           All billable trips that started in the origin borough during the
           month, which the origin-month's rows sum to. The same value on each of
           those rows, so it is not additive across them; it is the denominator
           of the share.
+        data_tests: [not_null]
       - name: cross_borough_share
+        data_type: DOUBLE
         description: >
-          cross_borough_trip_count divided by origin_trip_count, as a fraction
-          rather than a percentage. The same value on every row of an
-          origin-month.
+          cross_borough_billable_trip_count divided by origin_billable_trip_count,
+          as a fraction rather than a percentage. The same value on every row of
+          an origin-month.
+        data_tests: [not_null]

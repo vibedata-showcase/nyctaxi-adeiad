@@ -14,9 +14,16 @@
 --    other, so a trip to one of them is a crossing. Otherwise the share would
 --    move with how often the TLC could not place a zone.
 --
--- The share's numerator and denominator ride every row. They belong to the
--- origin-month, not to the row, so they repeat across destinations and are not
--- additive across them; the properties file says so on each.
+-- Every count here counts billable trips, so each is named for that population
+-- rather than borrowing the star's `trip_count`, which counts all trips.
+--
+-- The origin-month total is its own aggregate joined back to the pair, not a
+-- window function: the share's numerator and denominator are then plain sums a
+-- reader can re-add, and the model's own SELECT aggregates every measure.
+--
+-- Those two counts belong to the origin-month, not to the row, so they repeat
+-- across destinations and are not additive across them; the properties file
+-- says so on each.
 
 with trips as (
     select
@@ -39,8 +46,8 @@ pairs as (
         trip_month,
         origin_borough,
         dest_borough,
-        count(*) as trip_count,
-        sum(total_amount) as total_revenue,
+        count(*) as billable_trip_count,
+        sum(total_amount) as billable_revenue,
         -- A plain `<>` is null when either side is null, which would silently
         -- read an unresolved destination as staying put. Both-null means one
         -- unresolved borough on each side, so it stays.
@@ -52,36 +59,37 @@ pairs as (
     group by 1, 2, 3
 ),
 
-with_totals as (
+origin_month as (
     select
         trip_month,
         origin_borough,
-        dest_borough,
-        is_cross_borough,
-        trip_count,
-        total_revenue,
-        sum(trip_count) over (
-            partition by trip_month, origin_borough
-        ) as origin_trip_count,
+        sum(billable_trip_count) as origin_billable_trip_count,
         sum(
-            case when is_cross_borough then trip_count else 0 end
-        ) over (
-            partition by trip_month, origin_borough
-        ) as cross_borough_trip_count
+            case when is_cross_borough then billable_trip_count else 0 end
+        ) as cross_borough_billable_trip_count
     from pairs
+    group by 1, 2
 )
 
 select
-    trip_month,
-    origin_borough,
-    dest_borough,
-    is_cross_borough,
-    cast(trip_count as bigint) as trip_count,
-    cast(total_revenue as double) as total_revenue,
-    cast(cross_borough_trip_count as bigint) as cross_borough_trip_count,
-    cast(origin_trip_count as bigint) as origin_trip_count,
+    p.trip_month,
+    p.origin_borough,
+    p.dest_borough,
+    p.is_cross_borough,
+    cast(sum(p.billable_trip_count) as bigint) as billable_trip_count,
+    cast(sum(p.billable_revenue) as double) as billable_revenue,
+    cast(max(t.cross_borough_billable_trip_count) as bigint) as cross_borough_billable_trip_count,
+    cast(max(t.origin_billable_trip_count) as bigint) as origin_billable_trip_count,
     cast(
-        {{ safe_divide('cross_borough_trip_count', 'origin_trip_count') }}
+        {{ safe_divide(
+            'max(t.cross_borough_billable_trip_count)',
+            'max(t.origin_billable_trip_count)'
+        ) }}
         as double
     ) as cross_borough_share
-from with_totals
+from pairs p
+inner join origin_month t
+    on
+        p.trip_month = t.trip_month
+        and p.origin_borough is not distinct from t.origin_borough
+group by 1, 2, 3, 4

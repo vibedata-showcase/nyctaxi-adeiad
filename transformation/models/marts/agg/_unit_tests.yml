@@ -27,9 +27,9 @@ unit_tests:
           - {zone_key: Z3, borough_name: Queens}
     expect:
       rows:
-        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, is_cross_borough: false, trip_count: 2, total_revenue: 20.0, cross_borough_trip_count: 2, origin_trip_count: 4, cross_borough_share: 0.5}
-        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Brooklyn, is_cross_borough: true, trip_count: 1, total_revenue: 20.0, cross_borough_trip_count: 2, origin_trip_count: 4, cross_borough_share: 0.5}
-        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Queens, is_cross_borough: true, trip_count: 1, total_revenue: 5.0, cross_borough_trip_count: 2, origin_trip_count: 4, cross_borough_share: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, is_cross_borough: false, billable_trip_count: 2, billable_revenue: 20.0, cross_borough_billable_trip_count: 2, origin_billable_trip_count: 4, cross_borough_share: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Brooklyn, is_cross_borough: true, billable_trip_count: 1, billable_revenue: 20.0, cross_borough_billable_trip_count: 2, origin_billable_trip_count: 4, cross_borough_share: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Queens, is_cross_borough: true, billable_trip_count: 1, billable_revenue: 5.0, cross_borough_billable_trip_count: 2, origin_billable_trip_count: 4, cross_borough_share: 0.5}
 
   - name: borough_flow_counts_an_unresolved_or_unmatched_destination_as_a_crossing
     description: >
@@ -55,9 +55,9 @@ unit_tests:
           - {zone_key: Z9, borough_name: Unknown}
     expect:
       rows:
-        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, is_cross_borough: false, trip_count: 2, total_revenue: 16.0, cross_borough_trip_count: 2, origin_trip_count: 4, cross_borough_share: 0.5}
-        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Unknown, is_cross_borough: true, trip_count: 1, total_revenue: 12.0, cross_borough_trip_count: 2, origin_trip_count: 4, cross_borough_share: 0.5}
-        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: null, is_cross_borough: true, trip_count: 1, total_revenue: 8.0, cross_borough_trip_count: 2, origin_trip_count: 4, cross_borough_share: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, is_cross_borough: false, billable_trip_count: 2, billable_revenue: 16.0, cross_borough_billable_trip_count: 2, origin_billable_trip_count: 4, cross_borough_share: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Unknown, is_cross_borough: true, billable_trip_count: 1, billable_revenue: 12.0, cross_borough_billable_trip_count: 2, origin_billable_trip_count: 4, cross_borough_share: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: null, is_cross_borough: true, billable_trip_count: 1, billable_revenue: 8.0, cross_borough_billable_trip_count: 2, origin_billable_trip_count: 4, cross_borough_share: 0.5}
 
   - name: borough_flow_keeps_only_billable_trips_inside_the_window_by_month
     description: >
@@ -83,5 +83,5 @@ unit_tests:
           - {zone_key: Z2, borough_name: Brooklyn}
     expect:
       rows:
-        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Brooklyn, is_cross_borough: true, trip_count: 1, total_revenue: 20.0, cross_borough_trip_count: 1, origin_trip_count: 1, cross_borough_share: 1.0}
-        - {trip_month: '2024-02-01', origin_borough: Brooklyn, dest_borough: Manhattan, is_cross_borough: true, trip_count: 1, total_revenue: 15.0, cross_borough_trip_count: 1, origin_trip_count: 1, cross_borough_share: 1.0}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Brooklyn, is_cross_borough: true, billable_trip_count: 1, billable_revenue: 20.0, cross_borough_billable_trip_count: 1, origin_billable_trip_count: 1, cross_borough_share: 1.0}
+        - {trip_month: '2024-02-01', origin_borough: Brooklyn, dest_borough: Manhattan, is_cross_borough: true, billable_trip_count: 1, billable_revenue: 15.0, cross_borough_billable_trip_count: 1, origin_billable_trip_count: 1, cross_borough_share: 1.0}

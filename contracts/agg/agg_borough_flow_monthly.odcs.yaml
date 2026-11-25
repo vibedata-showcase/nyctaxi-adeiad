@@ -3,7 +3,7 @@ kind: DataContract
 id: 208cfca9-d46d-486c-8fba-7a2f490ff170
 name: agg_borough_flow_monthly
 version: 1.0.0
-status: proposed
+status: active
 servers:
   - server: sample-nyctaxi-comp
     type: duckdb
@@ -11,7 +11,7 @@ servers:
     schema: agg
 schema:
   - name: agg_borough_flow_monthly
-    dataGranularityDescription: One row per calendar month of the trip's pickup date, origin borough and destination borough, over billable trips inside the reporting window. Every pair that carried at least one billable trip is published and thin pairs are not withheld (ADR 0018); a pair with no billable trip has no row. Destinations whose borough the TLC cannot resolve, and the out-of-state one, are rows of their own and count as crossings (ADR 0019).
+    dataGranularityDescription: One row per calendar month of the trip's pickup date, origin borough and destination borough, over billable trips inside the reporting window. Every pair that carried at least one billable trip is published and thin pairs are not withheld (ADR 0018); a pair with no billable trip has no row. Destinations whose borough the TLC cannot resolve, and the out-of-state one, are rows of their own and count as crossings (ADR 0019). Every count is of billable trips.
     properties:
       - name: trip_month
         logicalType: date
@@ -39,7 +39,7 @@ schema:
           - type: library
             metric: nullValues
             mustBe: 0
-      - name: trip_count
+      - name: billable_trip_count
         logicalType: integer
         physicalType: BIGINT
         required: true
@@ -48,7 +48,7 @@ schema:
           - type: library
             metric: nullValues
             mustBe: 0
-      - name: total_revenue
+      - name: billable_revenue
         logicalType: number
         physicalType: DOUBLE
         required: true
@@ -57,7 +57,7 @@ schema:
           - type: library
             metric: nullValues
             mustBe: 0
-      - name: cross_borough_trip_count
+      - name: cross_borough_billable_trip_count
         logicalType: integer
         physicalType: BIGINT
         required: true
@@ -66,11 +66,11 @@ schema:
           - type: library
             metric: nullValues
             mustBe: 0
-      - name: origin_trip_count
+      - name: origin_billable_trip_count
         logicalType: integer
         physicalType: BIGINT
         required: true
-        description: All billable trips that started in the origin borough during the month, so the rows of one origin-month sum to it. Repeats on each destination row and is not additive across them; it is the denominator of the share.
+        description: All billable trips that started in the origin borough during the month, which the origin-month's rows sum to. Repeats on each destination row and is not additive across them; it is the denominator of the share.
         quality:
           - type: library
             metric: nullValues
@@ -79,7 +79,7 @@ schema:
         logicalType: number
         physicalType: DOUBLE
         required: true
-        description: cross_borough_trip_count divided by origin_trip_count, as a fraction rather than a percentage. The same value on every row of an origin-month.
+        description: cross_borough_billable_trip_count divided by origin_billable_trip_count, as a fraction rather than a percentage. The same value on every row of an origin-month.
         quality:
           - type: library
             metric: nullValues
