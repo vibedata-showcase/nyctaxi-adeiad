@@ -23,3 +23,7 @@ Two consequences follow, and both were answered by the Mobility Planning Lead ra
 - Any mart reporting a cross-borough rate uses this definition, so rates in different surfaces agree.
 - A consumer wanting only the resolved NYC boroughs filters on the zone dimension's own flags (`is_unresolved_zone`, `is_nyc`); the mart does not pre-filter for it, and its totals therefore include unresolved and non-NYC boroughs.
 - A trip whose pickup or dropoff finds no zone row keeps a null zone key (ADR 0015) and cannot be placed on the axis; it is outside any borough rate.
+
+## Affected designs
+
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)

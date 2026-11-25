@@ -22,3 +22,7 @@ ADR 0017 is unchanged and still governs `agg_od_flow_matrix`. The two surfaces a
 - A thin borough pair appears as a row with a single trip. A reader must not treat every published row as a route; the granularity, not a floor, is what makes this surface readable.
 - A borough pair with no billable trip in a month has no row, so a pivot over the matrix shows a gap rather than a zero.
 - Changing this population changes what the matrix and its derived share report, so it is a decision to record rather than a constant to tune quietly.
+
+## Affected designs
+
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
