@@ -110,7 +110,7 @@ models:
         data_type: BIGINT
       - name: billable_trip_count
         data_type: BIGINT
-        description: Trips whose total amount is positive (ADR 0003). The revenue counterpart of `trip_count`, which counts every trip.
+        description: Trips whose total amount is positive.
       - name: billable_fare_revenue
         data_type: DOUBLE
         description: Sum of fare_amount over billable trips only.

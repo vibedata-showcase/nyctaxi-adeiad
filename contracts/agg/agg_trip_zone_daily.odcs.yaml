@@ -2,7 +2,7 @@ apiVersion: v3.2.0
 kind: DataContract
 id: 6767ad11-6380-5435-8382-25fdafb31a75
 name: agg_trip_zone_daily
-version: 1.0.1
+version: 1.1.0
 status: active
 servers:
   - server: sample-nyctaxi-comp
@@ -27,6 +27,9 @@ schema:
       - name: borough_name
         logicalType: string
         physicalType: VARCHAR
+      - name: reporting_region
+        logicalType: string
+        physicalType: VARCHAR
       - name: trip_count
         logicalType: integer
         physicalType: BIGINT
@@ -39,6 +42,24 @@ schema:
       - name: attributed_driver_count
         logicalType: integer
         physicalType: BIGINT
+      - name: billable_trip_count
+        logicalType: integer
+        physicalType: BIGINT
+      - name: billable_fare_revenue
+        logicalType: number
+        physicalType: DOUBLE
+      - name: billable_tip_revenue
+        logicalType: number
+        physicalType: DOUBLE
+      - name: billable_surcharge_revenue
+        logicalType: number
+        physicalType: DOUBLE
+      - name: billable_toll_revenue
+        logicalType: number
+        physicalType: DOUBLE
+      - name: billable_total_revenue
+        logicalType: number
+        physicalType: DOUBLE
       - name: prev_day_trip_count
         logicalType: integer
         physicalType: BIGINT

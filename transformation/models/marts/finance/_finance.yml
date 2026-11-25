@@ -26,7 +26,7 @@ models:
         data_type: VARCHAR
       - name: trip_count
         data_type: BIGINT
-        description: Trips whose total amount is positive (ADR 0003); the report counts billable trips only.
+        description: Trips, billable or not.
       - name: fare_revenue
         data_type: DOUBLE
       - name: tip_revenue
