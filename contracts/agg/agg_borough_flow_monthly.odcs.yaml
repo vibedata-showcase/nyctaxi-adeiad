@@ -1,0 +1,95 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: ba654077-bad8-505c-ba51-7cb5f8a7c005
+name: agg_borough_flow_monthly
+version: 1.0.0
+status: active
+servers:
+  - server: sample-nyctaxi-comp
+    type: custom
+    schema: agg
+    customProperties:
+      - property: platform
+        value: duckdb_local
+schema:
+  - name: agg_borough_flow_monthly
+    dataGranularityDescription: 'Monthly borough-to-borough flow for the reporting window: one row per month, origin borough and destination borough that carries at least one billable trip. Every observed pair is published, so summing a month''s billable_trip_count or total_revenue reproduces the star''s billable totals for that month; the 25-trip floor on the zone-pair matrix (ADR 0017) does not apply here (ADR 0018). cross_borough_trip_share is the origin borough''s cross-borough trips over all its trips that month, repeated on every row that origin has, and cross_borough_trip_count is published beside it so the share can be recomputed from the table alone.'
+    properties:
+      - name: trip_month
+        logicalType: date
+        physicalType: DATE
+        description: Calendar month of the pickup date, as its first day.
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: origin_borough
+        logicalType: string
+        physicalType: VARCHAR
+        description: Borough of the pickup zone. EWR is out of state and Unknown and N/A are the zones no borough could be resolved for; both stay in the rollup (ADR 0012).
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+          - type: library
+            metric: invalidValues
+            arguments:
+              validValues:
+                - Bronx
+                - Brooklyn
+                - EWR
+                - Manhattan
+                - N/A
+                - Queens
+                - Staten Island
+                - Unknown
+            mustBe: 0
+      - name: dest_borough
+        logicalType: string
+        physicalType: VARCHAR
+        description: Borough of the dropoff zone, on the same eight groups as origin_borough.
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+          - type: library
+            metric: invalidValues
+            arguments:
+              validValues:
+                - Bronx
+                - Brooklyn
+                - EWR
+                - Manhattan
+                - N/A
+                - Queens
+                - Staten Island
+                - Unknown
+            mustBe: 0
+      - name: billable_trip_count
+        logicalType: integer
+        physicalType: BIGINT
+        description: Billable trips picked up in the month that start in origin_borough and end in dest_borough.
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: total_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of total_amount over those trips. Gross of payment method, so a no-charge or disputed trip with a positive total is included (ADR 0013).
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: cross_borough_trip_count
+        logicalType: integer
+        physicalType: BIGINT
+        description: The subset of billable_trip_count whose destination borough differs from origin_borough. Zero on rows where the two boroughs match.
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: cross_borough_trip_share
+        logicalType: number
+        physicalType: DOUBLE
+        description: The origin borough's cross-borough trips over all its billable trips that month, computed as a ratio of sums (ADR 0016) and repeated on every row that origin borough has in the month. Null when the origin has no billable trips, which no published row can then represent.

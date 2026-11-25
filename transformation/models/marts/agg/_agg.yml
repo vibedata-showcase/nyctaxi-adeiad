@@ -161,6 +161,51 @@ models:
       - name: avg_corridor_mph
         data_type: DOUBLE
         description: Mean trip distance divided by mean trip hours for the pair, in miles per hour; null when the divisor is zero.
+  - name: agg_borough_flow_monthly
+    description: >
+      Monthly borough-to-borough flow for the reporting window: one row per
+      month, origin borough and destination borough that carries at least one
+      billable trip. Every observed pair is published, so summing a month's
+      billable_trip_count or total_revenue reproduces the star's billable totals
+      for that month; the 25-trip floor on the zone-pair matrix (ADR 0017) does
+      not apply here (ADR 0018). cross_borough_trip_share is the origin borough's
+      cross-borough trips over all its trips that month, repeated on every row
+      that origin has, and cross_borough_trip_count is published beside it so
+      the share can be recomputed from the table alone.
+    access: public
+    contract: {enforced: true}
+    columns:
+      - name: trip_month
+        data_type: DATE
+        data_tests: [not_null]
+        description: Calendar month of the pickup date, as its first day.
+      - name: origin_borough
+        data_type: VARCHAR
+        data_tests: [not_null, {accepted_values: {arguments: {values: [Bronx, Brooklyn, EWR, Manhattan, N/A, Queens, Staten Island, Unknown]}}}]
+        description: Borough of the pickup zone. EWR is out of state and Unknown and N/A are the zones no borough could be resolved for; both stay in the rollup (ADR 0012).
+      - name: dest_borough
+        data_type: VARCHAR
+        data_tests: [not_null, {accepted_values: {arguments: {values: [Bronx, Brooklyn, EWR, Manhattan, N/A, Queens, Staten Island, Unknown]}}}]
+        description: Borough of the dropoff zone, on the same eight groups as origin_borough.
+      - name: billable_trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: Trips whose total amount is positive.
+      - name: total_revenue
+        data_type: DOUBLE
+        data_tests: [not_null]
+        description: Sum of total_amount over those trips. Gross of payment method, so a no-charge or disputed trip with a positive total is included (ADR 0013).
+      - name: cross_borough_trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: The subset of trip_count whose destination borough differs from origin_borough. Zero on rows where the two boroughs match.
+      - name: cross_borough_trip_share
+        data_type: DOUBLE
+        description: >
+          The origin borough's cross-borough trips over all its billable trips
+          that month, computed as a ratio of sums (ADR 0016) and repeated on
+          every row that origin borough has in the month. Null when the origin
+          has no billable trips, which no published row can then represent.
   - name: agg_trip_band_profile
     description: >
       Distance, duration and fare banding in one profile. Three independent range
