@@ -2,7 +2,7 @@ apiVersion: v3.2.0
 kind: DataContract
 id: edf94c85-cbf3-58ee-9672-f448930698dd
 name: mart_daily_zone_revenue
-version: 1.0.1
+version: 1.0.2
 status: active
 servers:
   - server: sample-nyctaxi-comp
@@ -15,6 +15,7 @@ schema:
       - name: trip_date
         logicalType: date
         physicalType: DATE
+        description: Date of the pickup.
         quality:
           - type: library
             metric: nullValues
@@ -22,6 +23,7 @@ schema:
       - name: total_revenue
         logicalType: number
         physicalType: DOUBLE
+        description: Sum of the total amount over the billable trips of the zone and day.
         quality:
           - type: library
             metric: nullValues
@@ -29,29 +31,38 @@ schema:
       - name: pickup_location_id
         logicalType: integer
         physicalType: BIGINT
+        description: TLC location id of the pickup zone.
         relationships:
           - to: dim_zone.zone_natural_key
       - name: borough
         logicalType: string
         physicalType: VARCHAR
+        description: Borough of the pickup zone.
       - name: zone_name
         logicalType: string
         physicalType: VARCHAR
+        description: Display name of the pickup zone.
       - name: reporting_region
         logicalType: string
         physicalType: VARCHAR
+        description: Reporting region of the pickup zone.
       - name: trip_count
         logicalType: integer
         physicalType: BIGINT
+        description: Billable trips.
       - name: fare_revenue
         logicalType: number
         physicalType: DOUBLE
+        description: Sum of the fare over the billable trips.
       - name: tip_revenue
         logicalType: number
         physicalType: DOUBLE
+        description: Sum of the tip over the billable trips.
       - name: surcharge_revenue
         logicalType: number
         physicalType: DOUBLE
+        description: Sum of the surcharges over the billable trips.
       - name: toll_revenue
         logicalType: number
         physicalType: DOUBLE
+        description: Sum of the tolls over the billable trips.
