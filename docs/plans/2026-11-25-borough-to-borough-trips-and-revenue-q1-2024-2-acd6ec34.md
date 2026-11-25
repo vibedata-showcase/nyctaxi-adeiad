@@ -33,11 +33,11 @@
 
 **Requirements:** `R-01` · **Design:** `docs/design/models/agg/agg_borough_flow_monthly.md` · **Skill:** `data-contract` · **Depends on:** none
 
-- [ ] Author `contracts/agg/agg_borough_flow_monthly.odcs.yaml` from `contracts/agg/agg_od_flow_matrix.odcs.yaml`: same `apiVersion`, `kind` and `servers` block, a new `id`, `version: 1.0.0`, `status: proposed` because the table does not exist yet, `schema[].name: agg_borough_flow_monthly`.
-- [ ] Declare one property per output column with `logicalType` and `physicalType`, and a `dataGranularityDescription` stating the (month, origin borough, destination borough) grain, the billable population, the absent floor and the share's denominator.
-- [ ] Declare `required: true` and `quality: [{type: library, metric: nullValues, mustBe: 0}]` on `trip_month`, `origin_borough`, `dest_borough`, `trip_count`, `total_revenue`, `origin_trip_count`, `cross_borough_trip_count`, and on `is_cross_borough`; declare no `primaryKey` (a three-column key renders no per-column test and `profile` checks it instead).
-- [ ] Run `python3 .agents/skills/data-contract/scripts/odcs.py check`; expect exit 0 with the document shape-checked and the orphan, document-agreement and `--relations` checks skipped for `proposed`.
-- [ ] Commit and push `contracts/agg/agg_borough_flow_monthly.odcs.yaml`.
+- [x] Author `contracts/agg/agg_borough_flow_monthly.odcs.yaml` from `contracts/agg/agg_od_flow_matrix.odcs.yaml`: same `apiVersion`, `kind` and `servers` block, a new `id`, `version: 1.0.0`, `status: proposed` because the table does not exist yet, `schema[].name: agg_borough_flow_monthly`.
+- [x] Declare one property per output column with `logicalType` and `physicalType`, and a `dataGranularityDescription` stating the (month, origin borough, destination borough) grain, the billable population, the absent floor and the share's denominator.
+- [x] Declare `required: true` and `quality: [{type: library, metric: nullValues, mustBe: 0}]` on `trip_month`, `origin_borough`, `dest_borough`, `trip_count`, `total_revenue`, `origin_trip_count`, `cross_borough_trip_count`, and on `is_cross_borough`; declare no `primaryKey` (a three-column key renders no per-column test and `profile` checks it instead).
+- [x] Run `python3 .agents/skills/data-contract/scripts/odcs.py check`; expect exit 0 with the document shape-checked and the orphan, document-agreement and `--relations` checks skipped for `proposed`.
+- [x] Commit and push `contracts/agg/agg_borough_flow_monthly.odcs.yaml`.
 
 ### Task 2: the model, its tests and its enforcement keys
 
@@ -69,3 +69,4 @@
 - [ ] Commit and push the Ossie document, the regenerated tests and the contract.
 
 ## Execution evidence
+- Task 1: `python3 .agents/skills/data-contract/scripts/odcs.py check` — exit 0 — `contracts/agg/agg_borough_flow_monthly.odcs.yaml` (status proposed, 9 properties) — sha256:a170bea015c83ca3397bf315110f4e33f5b2632ddf93c4cc6a58fb415ead503b
