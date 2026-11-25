@@ -21,3 +21,7 @@ ADR 0017's 25-trip floor is a rule about which zone pairs may be called a publis
 - Summing the pair rows of a month reproduces the month's billable trips, unresolved groups included.
 - A borough pair with no traffic in a month is absent rather than published as zero, so a reader counts crossings that happened.
 - The share repeated on each of an origin borough's rows is one number: it is a property of the origin borough-month, not of the pair.
+
+## Affected designs
+
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
