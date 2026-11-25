@@ -42,6 +42,10 @@
 | ADR lint and links | `python3 .github/scripts/adr_lint.py`; `python3 -m pytest tests/test_adr_links.py -q` | 0 / 0 | pass |
 | Dev-artifact scan | `git diff origin/main -- transformation/ \| grep -cE 'dev_mode\|add_limit\|target-path'` | 0 | pass: zero matching lines, so no dev artifact survived |
 | Baseline cross-check | not applicable | - | the Domain publishes no production manifest (dbt card `## Defer`), so `/data/cache` was never read |
+| Contract promotion | `diff_manifest_contract.py` base manifest at the merge-base vs `target/manifest.json` | 0 | `weaker: []`, one `stronger` entry: the new model's enforced contract. Nothing to promote; the new model already carries `access: public`, `contract: {enforced: true}` and a `data_type` on every column |
+| Contract validation build | `cd transformation && dbt build --select agg_borough_flow_monthly --target dev` | 0 | pass, PASS=13 WARN=1 ERROR=0, no `contract violation` |
+| Ship sandbox destination | `python .../scripts/assert_dbt_destination.py` after that build | 0 | pass, 1 relation in the sandbox |
+| Ship currency | `python .../scripts/ship_currency.py --rows .agents_tmp/ship-currency-rows.json` | 0 | fresh; `stale: []` |
 
 ## Findings
 
