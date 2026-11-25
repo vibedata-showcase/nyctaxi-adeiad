@@ -2,7 +2,7 @@ apiVersion: v3.2.0
 kind: DataContract
 id: 6767ad11-6380-5435-8382-25fdafb31a75
 name: agg_trip_zone_daily
-version: 1.0.1
+version: 1.1.0
 status: active
 servers:
   - server: sample-nyctaxi-comp
@@ -54,3 +54,43 @@ schema:
       - name: revenue_rank_that_day
         logicalType: integer
         physicalType: BIGINT
+      - name: reporting_region
+        logicalType: string
+        physicalType: VARCHAR
+        description: Reporting region of the pickup zone, from the zone version in force on the pickup date. Manhattan Core, Outer Boroughs, Out of State, or Unresolved for a zone the TLC cannot place in a borough.
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: billable_trip_count
+        logicalType: integer
+        physicalType: BIGINT
+        description: Trips on the zone-day whose total amount is positive, the population the finance daily zone revenue report counts (ADR 0003).
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: billable_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of total_amount over the zone-day's billable trips. Not derivable from total_revenue, because a non-billable trip carries a negative total.
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: billable_fare_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of fare_amount over the zone-day's billable trips.
+      - name: billable_tip_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of tip_amount over the zone-day's billable trips. Card tips only; cash trips record a zero that means "not measured" (ADR 0011).
+      - name: billable_surcharge_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of every pass-through surcharge (extra, MTA tax, improvement, congestion) over the zone-day's billable trips.
+      - name: billable_toll_revenue
+        logicalType: number
+        physicalType: DOUBLE
+        description: Sum of tolls_amount over the zone-day's billable trips.

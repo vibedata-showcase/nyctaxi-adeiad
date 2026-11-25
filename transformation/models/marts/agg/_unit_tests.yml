@@ -1,0 +1,44 @@
+version: 2
+
+unit_tests:
+  # --- agg_trip_zone_daily: the billable split and the empty-group zero ------
+  - name: zone_daily_billable_measures_split_a_mixed_zone_day
+    description: >
+      A zone-day holding one billable and one non-billable trip counts both in
+      trip_count and only the billable one in the billable measures. A
+      non-billable trip carries a negative total, so billable revenue exceeds the
+      all-trip total and the two must not be confused.
+    model: agg_trip_zone_daily
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_date_key: 20240105, pickup_date: '2024-01-05', pickup_datetime: '2024-01-05 10:00:00', pickup_zone_key: 1, is_billable: true, total_amount: 100.0, fare_amount: 70.0, tip_amount: 10.0, total_surcharges: 15.0, tolls_amount: 5.0, trip_distance: 10.0, driver_key: 1}
+          - {pickup_date_key: 20240105, pickup_date: '2024-01-05', pickup_datetime: '2024-01-05 11:00:00', pickup_zone_key: 1, is_billable: false, total_amount: -50.0, fare_amount: -40.0, tip_amount: 0.0, total_surcharges: -5.0, tolls_amount: -5.0, trip_distance: 5.0, driver_key: 2}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: 1, zone_natural_key: 132, zone_name: JFK Airport, borough_name: Queens, reporting_region: Out of State}
+    expect:
+      rows:
+        - {pickup_date: '2024-01-05', pickup_location_id: 132, zone_name: JFK Airport, borough_name: Queens, reporting_region: Out of State, trip_count: 2, billable_trip_count: 1, total_revenue: 50.0, billable_revenue: 100.0, billable_fare_revenue: 70.0, billable_tip_revenue: 10.0, billable_surcharge_revenue: 15.0, billable_toll_revenue: 5.0, total_miles: 15.0, attributed_driver_count: 2}
+
+  - name: zone_daily_billable_measures_are_zero_when_no_trip_is_billable
+    description: >
+      A zone-day whose trips are all non-billable has no billable row for a
+      filtered sum to add up. The row survives, because the table answers
+      demand, and its billable measures read zero rather than null so the
+      consumer that filters on them sees a value it can read.
+    model: agg_trip_zone_daily
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {pickup_date_key: 20240105, pickup_date: '2024-01-05', pickup_datetime: '2024-01-05 10:00:00', pickup_zone_key: 2, is_billable: false, total_amount: -20.0, fare_amount: -15.0, tip_amount: 0.0, total_surcharges: -3.0, tolls_amount: -2.0, trip_distance: 3.0, driver_key: 3}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: 2, zone_natural_key: 7, zone_name: Astoria, borough_name: Queens, reporting_region: Outer Boroughs}
+    expect:
+      rows:
+        - {pickup_location_id: 7, trip_count: 1, billable_trip_count: 0, total_revenue: -20.0, billable_revenue: 0.0, billable_fare_revenue: 0.0, billable_tip_revenue: 0.0, billable_surcharge_revenue: 0.0, billable_toll_revenue: 0.0, total_miles: 3.0, attributed_driver_count: 1}

@@ -1,0 +1,15 @@
+Add billable measures and reporting region to the daily zone aggregate
+
+agg_trip_zone_daily now publishes the billable population beside its all-trip
+columns, so the finance daily zone revenue report can read one relation instead
+of aggregating fct_trip a second time (ADR 0018). The existing columns keep their
+names, positions, types and values; the new ones are appended.
+
+Each billable sum is coalesced to zero: a zone-day whose trips are all
+non-billable has no filtered row to add up, and the design says such a row
+carries zero rather than null. That is recorded as D-07, superseding D-06.
+
+Also adds reporting_region, which the report publishes and the table did not
+carry; re-joining dim_zone downstream would fan out across seven SCD2 zone keys.
+
+Co-authored-by: Vibedata <help@getvibedata.ai>
