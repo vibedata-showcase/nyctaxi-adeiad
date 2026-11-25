@@ -1,22 +1,30 @@
--- Daily revenue by pickup zone.
+-- Daily revenue by pickup zone, built from the operations daily zone figure
+-- rather than a second aggregation of the trip fact (ADR 0018). One source for
+-- both the finance report and the ops view.
 --
--- The billable rule (ADR 0003) is applied here, in gold, and nowhere upstream,
--- so data-quality work can still see the rows this excludes.
+-- The billable rule (ADR 0003) is applied in agg_trip_zone_daily and inherited
+-- here: its billable measures are what the report publishes, so nothing in this
+-- model filters on is_billable or re-derives the population.
+--
+-- Zone attributes come from the aggregate too. Joining dim_zone here would fan
+-- out: seven zone natural keys carry two versions, so the natural-key join
+-- returns two rows for those zone-days and doubles their revenue.
+--
+-- A zone-day whose trips are all non-billable carries a zero billable count and
+-- is not published: it has no revenue to report.
 select
-    f.pickup_date as trip_date,
-    z.zone_natural_key as pickup_location_id,
-    z.borough_name as borough,
-    z.zone_name,
-    z.reporting_region,
-    count(*) as trip_count,
-    sum(f.fare_amount) as fare_revenue,
-    sum(f.tip_amount) as tip_revenue,
-    sum(f.total_surcharges) as surcharge_revenue,
-    sum(f.tolls_amount) as toll_revenue,
-    sum(f.total_amount) as total_revenue
-from {{ ref('fct_trip') }} f
-join {{ ref('dim_zone') }} z on f.pickup_zone_key = z.zone_key
+    agg.pickup_date as trip_date,
+    agg.pickup_location_id,
+    agg.borough_name as borough,
+    agg.zone_name,
+    agg.reporting_region,
+    agg.billable_trip_count as trip_count,
+    agg.billable_fare_revenue as fare_revenue,
+    agg.billable_tip_revenue as tip_revenue,
+    agg.billable_surcharge_revenue as surcharge_revenue,
+    agg.billable_toll_revenue as toll_revenue,
+    agg.billable_revenue as total_revenue
+from {{ ref('agg_trip_zone_daily') }} agg
 where
-    {{ in_report_window('f.pickup_datetime') }}
-    and f.is_billable
-group by 1, 2, 3, 4, 5
+    {{ in_report_window('agg.pickup_date') }}
+    and agg.billable_trip_count > 0

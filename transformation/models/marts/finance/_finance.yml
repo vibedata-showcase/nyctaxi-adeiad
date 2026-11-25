@@ -24,7 +24,7 @@ models:
         data_type: VARCHAR
       - name: trip_count
         data_type: BIGINT
-        description: Trips, billable or not.
+        description: '{{ doc("billable_trip_count") }}'
       - name: fare_revenue
         data_type: DOUBLE
       - name: tip_revenue

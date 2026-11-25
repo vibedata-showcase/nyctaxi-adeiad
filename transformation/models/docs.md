@@ -55,3 +55,12 @@ This is a property of the business, not missing data. `is_fleet_attributed`
 states it explicitly so that no consumer has to infer it from a null, and so
 that a fleet-level denominator is never taken over the whole fact.
 {% enddocs %}
+
+{% docs billable_trip_count %}
+Trips on the row whose total amount is positive. That is the population revenue
+and flow reporting counts (ADR 0003), so a revenue report's trip count is this
+column under whatever dimension it groups by.
+
+_Not_: all trips. A demand or quality figure counts the trips this excludes, and
+those carry a total of zero or less.
+{% enddocs %}
