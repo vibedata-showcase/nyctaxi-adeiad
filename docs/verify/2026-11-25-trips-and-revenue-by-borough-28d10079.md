@@ -57,6 +57,7 @@
 | Contract build | `cd transformation && dbt build --select agg_borough_flow_monthly --exclude test_type:unit --target dev --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass (PASS=12, WARN=1, no contract violation) |
 | Destination after the contract build | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/assert_dbt_destination.py` | 0 | pass (`DESTINATION_OK`) |
 | Domain sweep | `grep -n "Cross-borough trip" CONTEXT.md`; ADR 0018, 0019 read against the design record | 0 | pass — `domain sweep: nothing new`: `Cross-borough trip` was added with the Requirement and both ADRs were written with it; no term or decision this intent introduced is missing |
+| Local git hooks | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/ci_install_state.py check-hooks --target .` | 6 | not installed (a notice, not a gate): `.git/hooks/pre-commit` and `.git/hooks/pre-push` are absent, so this push ran without the local secret scan and lint; `ci/static-check` in CI is then the only SQLFluff check |
 
 ## Findings
 
