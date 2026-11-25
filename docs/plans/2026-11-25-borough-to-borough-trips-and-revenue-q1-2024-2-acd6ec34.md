@@ -56,19 +56,6 @@
 - [x] Run the acceptance conditions of `R-01`…`R-07` from `## Discovery`'s independent queries; expect 122 rows, three months, every origin-month reconciling, no zero `trip_count`, and Manhattan January 2024 at 6.01%.
 - [x] Commit and push the SQL, `_agg.yml`, `_unit_tests.yml`, the singular test and `test-map.json`.
 
-## Execution evidence`; the Verification's `## Discovery` already holds this intent's probes.
-- [x] Author `transformation/models/marts/agg/agg_borough_flow_monthly.sql`: `fct_trip` joined `left` to `core.dim_zone` twice (pickup, dropoff), filtered on `in_report_window('f.pickup_datetime')` and `f.is_billable`, grouped by the month of `pickup_date`, the origin borough and the destination borough, carrying `trip_count`, `total_revenue`, `is_cross_borough`, `cross_borough_trip_count` (a window sum over the origin-month partition) and `origin_trip_count` (the partition total), with `cross_borough_share` from `safe_divide`.
-- [x] Add the model's entry to `transformation/models/marts/agg/_agg.yml` with `access: public`, a description stating the grain, the billable population, the absent floor, the unresolved and out-of-state destinations and the non-additivity of the two repeated counts, and one description per column.
-- [x] Author `transformation/models/marts/agg/_unit_tests.yml` with unit tests covering: a same-borough row carrying `is_cross_borough` false and excluded from `cross_borough_trip_count`; a differing destination counted in it; a null destination borough (unmatched zone key) kept as a row and treated as crossing; and the denominator equal to the whole origin-month including the rows of other destinations.
-- [x] Author `transformation/tests/assert_borough_flow_share_reconciles.sql`: returns any row where `cross_borough_trip_count` differs from the sum of its origin-month's rows whose destination differs, or `origin_trip_count` from that month's total, or the share from the ratio of the two.
-- [x] Run `cd transformation && dbt deps` if `dbt_packages/` is absent, then `dbt build --select agg_borough_flow_monthly --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'`; expect exit 0.
-- [x] Run `python3 "$SKILL_DIR/../../scripts/assert_dbt_destination.py"` with the skill's own directory substituted; expect exit 0, then the ephemeral workspace marker.
-- [x] Run `python3 .agents/skills/data-contract/scripts/odcs.py generate` to write `contract: {enforced: true}`, every `data_type` and every `data_tests`; expect exit 0 and the keys present in `_agg.yml`.
-- [x] Run `cd transformation && dbt build --select agg_borough_flow_monthly --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` again, so the enforced contract is the one that built; expect exit 0.
-- [x] Add the agg layer's `unit` selector and the new singular test to `test-map.json`, then run `python3 -m pytest tests/test_maps.py -q`; expect exit 0.
-- [x] Run the acceptance conditions of `R-01`…`R-07` from `## Discovery`'s independent queries; expect 122 rows, three months, every origin-month reconciling, no zero `trip_count`, and Manhattan January 2024 at 6.01%.
-- [x] Commit and push the SQL, `_agg.yml`, `_unit_tests.yml`, the singular test and `test-map.json`.
-
 ### Task 3: the semantic source, the contract set active, the rebuild
 
 **Requirements:** `R-08` · **Design:** `docs/design/models/agg/agg_borough_flow_monthly.md` · **Skill:** `semantic-model` · **Depends on:** Task 2
