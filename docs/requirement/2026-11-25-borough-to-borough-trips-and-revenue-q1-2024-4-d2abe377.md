@@ -29,7 +29,7 @@ Leila Haddad, Mobility Planning Lead, was asked by the city how much of the traf
 | Population and floor | The full borough cross product every month, no trip floor: 8 borough groups × 8 × 3 months. ADR 0017's 25-trip floor governs the zone-pair matrix and does not apply at borough grain | user answer; `docs/adr/0018-a-borough-level-flow-publishes-the-full-borough-cross-product.md` |
 | Billable rule | Applied here, in gold: trips whose total amount is positive only | `docs/adr/0003-billable-trip-definition-and-where-it-applies.md` |
 | Empty cells | A pair with no billable trip in the month is published with 0 trips and 0 revenue, never omitted and never null | user answer on population |
-| Revenue amount | **Open** — whether "revenue" is `sum(total_amount)` (what the passenger paid, the amount every existing revenue mart publishes), `sum(fare_amount)`, or all fare components published separately beside a total. Recommendation: `sum(total_amount)`. Holds the design of the revenue columns | request (says "revenue" only); question timed out twice — see `## Open questions` |
+| Revenue amount | `sum(total_amount)` — what the passenger paid, all fare components included, the amount `agg_od_flow_matrix` and `mart_daily_zone_revenue` publish as `total_revenue` | user answer (`approved` at the requirement stop, settling it as `sum(total_amount)`); repository (`mart_daily_zone_revenue.sql`, `agg_od_flow_matrix.sql`) |
 | Crossing share | Ratio of summed counts: cross-borough trips over the origin borough's trips for that month, computed with `safe_divide` so a borough-month with no trips yields null; published beside both counts, and repeated on every destination row of the borough-month | user answer on share; `docs/adr/0016-rates-are-rebuilt-from-summed-numerators-and-denominators.md` |
 | Per-row share | The row's trips over its origin borough's trips that month, by the same ratio-of-sums rule | user answer on share |
 | Borough set | Every distinct borough group in `core.dim_zone`, including the unresolved `Unknown` and `N/A` groups, so the number of cells follows that dimension rather than a list in code | `docs/adr/0012-unresolved-zones-are-retained-and-flagged.md` |
@@ -48,9 +48,9 @@ Leila Haddad, Mobility Planning Lead, was asked by the city how much of the traf
 
 ## Open questions
 
-- **Which amount is "revenue"?** The request says only "revenue". The recommendation is `sum(total_amount)`, the amount `agg_od_flow_matrix` and `mart_daily_zone_revenue` publish as `total_revenue`; `sum(fare_amount)` and a set of separate fare components are the alternatives. Asked twice and unanswered, so it is recorded here rather than assumed. Holds the revenue columns and R-03's acceptance value.
 - **Does the table follow the reporting window or stay pinned to Q1 2024?** The two agree today (the window is 2024-01-01 to 2024-04-01), but the request names a quarter. Recommendation: follow the window, as every other mart does, so the table never claims a quarter it does not report. Holds nothing until the window changes; recorded so the design stop can settle it.
 
 ## Approvals
 
 <!-- Append-only, approvals only, one line each: `- <UTC> — <requirement | design | breaking contract | ship> approved — "<the user's literal answer>" — <commit>`. A declined stop is recorded under `## Open questions` or in the design record, never here. -->
+- 2026-11-25T05:54:25Z — requirement approved — "approved" — 5ec3e66
