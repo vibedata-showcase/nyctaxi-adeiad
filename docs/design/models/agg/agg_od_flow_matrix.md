@@ -13,7 +13,7 @@ One row per (origin zone, destination zone) pair that qualifies under the floor 
 ## Decisions
 
 - **D-1 A pair is published only at 25 billable trips.** The rule, its alternatives and its consequences are ADR 0017; what population the table therefore answers is stated on its logical source in the semantic model, not repeated here.
-- **D-2 Billable only.** The matrix counts billable trips, per ADR 0003, because a non-billable trip is not a flow anyone paid for.
+- **D-2 Billable only.** The matrix counts billable trips, per ADR 0018, because a non-billable trip is not a flow anyone paid for.
 - **D-3 Natural keys only.** The table carries `zone_natural_key` and the zone's descriptive columns, not surrogate keys, so a pair keeps its identity across a zone re-designation. Reason: a surrogate would split one route into two rows when a zone version changes.
 - **D-4 The roles are the point.** The same dimension joined twice is what makes a matrix possible; a single zone key cannot produce an origin and a destination for the same trip.
 

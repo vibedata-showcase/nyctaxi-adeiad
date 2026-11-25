@@ -1,6 +1,7 @@
 ---
-status: decided
+status: rejected
 date: 2026-10-14
+rejected-note: Superseded by docs/adr/0018-zone-day-billable-measures-are-computed-once-in-the-aggregate.md
 ---
 
 # A billable trip is one with a positive total, applied where revenue and flows are reported
