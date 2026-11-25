@@ -24,4 +24,4 @@ At borough grain the floor does not do the work it does for zones. There are a h
 
 ## Affected designs
 
-- None yet: the design record for this surface is written at the design stop.
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)

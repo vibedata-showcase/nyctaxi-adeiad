@@ -23,4 +23,4 @@ ADR 0012 keeps unresolved zones and their trips, and a borough rollup shows the 
 
 ## Affected designs
 
-- None yet: the design record for this surface is written at the design stop.
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
