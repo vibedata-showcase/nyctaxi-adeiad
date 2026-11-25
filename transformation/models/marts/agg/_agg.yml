@@ -78,7 +78,11 @@ models:
     description: >
       Daily zone demand with period-over-period context. The window functions are
       the point: a raw count answers "how many", the lag and rolling average
-      answer "is that normal".
+      answer "is that normal". Carries the all-trips figures in `trip_count` and
+      `total_revenue`, and the billable ones beside them in the `billable_`
+      columns, both from the same scan; the two populations differ because the
+      billable measures apply the billable rule (ADR 0003) and the all-trips ones
+      do not.
     contract: {enforced: true}
     columns:
       - name: pickup_date_key
@@ -91,6 +95,10 @@ models:
         data_type: VARCHAR
       - name: borough_name
         data_type: VARCHAR
+      - name: reporting_region
+        data_type: VARCHAR
+        description: >
+          Reporting region of the zone version in force on the pickup date.
       - name: trip_count
         data_type: BIGINT
         description: Trips, billable or not.
@@ -99,6 +107,34 @@ models:
       - name: total_miles
         data_type: DOUBLE
       - name: attributed_driver_count
+        data_type: BIGINT
+      - name: billable_trip_count
+        data_type: BIGINT
+        description: Trips whose total amount is positive.
+      - name: billable_fare_revenue
+        data_type: DOUBLE
+        description: Sum of the fare over the billable trips.
+      - name: billable_tip_revenue
+        data_type: DOUBLE
+        description: Sum of the tip over the billable trips.
+      - name: billable_surcharge_revenue
+        data_type: DOUBLE
+        description: Sum of the surcharges over the billable trips.
+      - name: billable_toll_revenue
+        data_type: DOUBLE
+        description: Sum of the tolls over the billable trips.
+      - name: billable_total_revenue
+        data_type: DOUBLE
+        description: Sum of the total amount over the billable trips.
+      - name: prev_day_trip_count
+        data_type: BIGINT
+      - name: same_day_last_week_trip_count
+        data_type: BIGINT
+      - name: trip_count_7d_avg
+        data_type: DOUBLE
+      - name: revenue_28d_rolling
+        data_type: DOUBLE
+      - name: revenue_rank_that_day
         data_type: BIGINT
       - name: prev_day_trip_count
         data_type: BIGINT
