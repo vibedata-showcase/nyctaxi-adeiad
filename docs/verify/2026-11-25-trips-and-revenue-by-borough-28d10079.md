@@ -1,5 +1,62 @@
 # Verification: Trips and revenue by borough
 
+## Verification
+
+`verdict: verified` at `f98c18d`: every requirement and every Plan scope row has independent evidence from `fct_trip` recomputation or a passing gate at this commit. One divergence from the Requirement's prose is recorded under Findings: `R-02` and `R-05` name a column `trip_count`, and the built column is `billable_trip_count` (design `D-12`); every value they assert holds.
+
+## Coverage
+
+| Item | Evidence | Result | At |
+| --- | --- | --- | --- |
+| `R-01` one row per month × origin borough × destination borough | `assert_borough_flow_one_row_per_grain` returns duplicate or null-key rows; independent `count(*)` grouped by the three keys | test PASS; 122 rows, 40 / 40 / 42 by month, no duplicate key and no null key | `f98c18d` |
+| `R-02` billable population closes against the fact | `assert_borough_flow_reconciles_to_fct_trip` compares `sum(billable_trip_count)` and `round(sum(total_revenue), 2)` to `fct_trip`; independent recomputation from `fct_trip` | test PASS; 95,958 trips, revenue 2,629,185.82 at the cent, equal to `fct_trip`'s billable figures | `f98c18d` |
+| `R-03` crossing count and share per origin borough and month | `assert_borough_flow_share_matches_its_counts` recomputes each origin-month's share from the published rows; independent recomputation comparing `cross_borough_share` to `cross_borough_trip_count / sum(billable_trip_count)` per origin-month | test PASS; 24 origin-months whose distinct `cross_borough_trip_count` sums to 12,214; maximum absolute share error 0.0 | `f98c18d` |
+| `R-04` crossing by name difference; unplaceable and out-of-city groups kept | independent query for rows whose origin or destination borough is `Unknown`, `N/A` or `EWR`; 8 distinct origins and 8 distinct destinations; no filter on `is_unresolved_zone` in the SQL | such rows are present (e.g. Bronx→Unknown, Brooklyn→EWR, Queens→N/A); 8 origins and 8 destinations | `f98c18d` |
+| `R-05` no floor at borough grain | independent `min(billable_trip_count)` and count of rows below 25 trips | minimum cell 1 trip; 66 rows below 25, holding the 253 trips the Discovery measured | `f98c18d` |
+| `R-06` boundary relation under an enforced contract | `odcs.py check`; `check --relations --catalog`; `odcs.py profile --relation`; `contract: {enforced: true}` with `data_tests: [not_null]` in `_agg.yml` | check exit 0 with no finding naming the relation; relations check names no `agg_borough_flow_monthly`; profile exit 0 with no finding (key holds, `required` holds) | `f98c18d` |
+| `contracts/agg/agg_borough_flow_monthly.odcs.yaml` | `odcs.py check`, `odcs.py diff origin/main` | check exit 0; diff exit 0 | `f98c18d` |
+| `transformation/models/marts/agg/agg_borough_flow_monthly.sql` | `dbt build --select +agg_borough_flow_monthly --exclude test_type:unit` | exit 0, PASS=107 WARN=1 ERROR=0 | `f98c18d` |
+| `transformation/models/marts/agg/_agg.yml` | same build; the enforced contract refused a `HUGEINT` count until it was cast | exit 0; `billable_trip_count` BIGINT, `total_revenue` DOUBLE, `cross_borough_share` DOUBLE | `f98c18d` |
+| `transformation/models/marts/agg/_unit_tests.yml` | `dbt test --select +agg_borough_flow_monthly,test_type:unit` | exit 0, PASS=7 | `f98c18d` |
+| the four singular tests | the same build, and each named in its own `dbt test` selection | all four PASS | `f98c18d` |
+| `logical-model/nyc_taxi_analytics.ossie.yaml` | `ossie.py validate`, `coverage`, `suppliers`, `notes`, `bindings`, `columns` | each exit 0; `bindings` 0 errors and 0 warnings; `columns` reports no warning on the new relation | `f98c18d` |
+| regenerated `assert_semantic_*.sql` | `ossie.py generate-tests --check` | exit 0, 0 stale | `f98c18d` |
+| `test-map.json` | `python3 -m pytest tests -q` | exit 0, 223 passed | `f98c18d` |
+
+## Gate results
+
+| Gate | Command | Exit | Outcome |
+| --- | --- | --- | --- |
+| Data tests and build on the selection | `cd transformation && dbt build --select +agg_borough_flow_monthly --exclude test_type:unit --target dev --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass (PASS=107, WARN=1) |
+| Destination after the build | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/assert_dbt_destination.py` | 0 | pass (`DESTINATION_OK`) |
+| Unit tests on the selection | `cd transformation && dbt test --select +agg_borough_flow_monthly,test_type:unit --target dev` | 0 | pass (PASS=7) |
+| Project audit | `cd transformation && dbt build --select package:dbt_project_evaluator --vars '{dbt_project_evaluator_enabled: true}' --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}' --target dev` | 0 | pass (PASS=66, WARN=12; ERROR=0). The 12 warnings include `is_empty_fct_missing_primary_key_tests_` with 21 rows, one of them `agg_borough_flow_monthly` — every other `agg` and `mart_` model is listed the same way, so the finding is the project's existing convention of expressing a composite grain through the contract rather than a dbt `unique` test, not a defect this intent introduces |
+| Destination after the audit | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/assert_dbt_destination.py` | 0 | pass (`DESTINATION_OK: 49`) |
+| Python tests | `python3 -m pytest tests -q` | 0 | pass (223 passed) |
+| Python lint | `ruff check .` | 0 | pass |
+| SQL lint | `sqlfluff lint transformation/models` | 0 | pass |
+| ADR lint | `python3 .github/scripts/adr_lint.py` | 0 | pass |
+| Semantic and contract lint | `python3 tools/ossie_lint.py` | 0 | pass (0 blocking) |
+| Contract check | `python3 .agents/skills/data-contract/scripts/odcs.py check` | 0 | pass (3 pre-existing `info` rows) |
+| Contract version diff | `python3 .agents/skills/data-contract/scripts/odcs.py diff origin/main` | 0 | pass (`[]`) |
+| Contract relations | `python3 .agents/skills/data-contract/scripts/odcs.py check --relations --catalog transformation/target/catalog.json` | 1 | fail, outside this intent's rows: six `relations/mismatch` errors name only `bronze`/`mdm_raw`/`ops_raw` `audit_runs` and `audit_table_loads`, relations the sandbox does not hold because the pipelines were not run in this Intent. No finding names `agg_borough_flow_monthly`. Recorded as a finding, not a blocker |
+| Contract profile | `python3 .agents/skills/data-contract/scripts/odcs.py profile --relation agg.agg_borough_flow_monthly --catalog /data/ephm_duckdb/ephm_nyc-taxi-analytics_new-intent-28d10079.duckdb` | 0 | pass (`[]`) |
+| Semantic structure | `python3 .agents/skills/semantic-model/scripts/ossie.py validate logical-model/` | 0 | pass (0 errors; 1 pre-existing warning) |
+| Semantic coverage | `python3 .agents/skills/semantic-model/scripts/ossie.py coverage logical-model/ transformation/models/marts/agg/ transformation/models/marts/core/ transformation/models/marts/finance/ transformation/models/marts/ops/ --exclude agg.agg_od_flow_matrix --exclude finance.mart_revenue_component_bridge --exclude core.dim_fare_regime` | 0 | pass (0 coverage errors) |
+| Semantic suppliers | `python3 .agents/skills/semantic-model/scripts/ossie.py suppliers logical-model/` | 0 | pass (`0 unsupplied item(s).`) |
+| Semantic notes | `python3 .agents/skills/semantic-model/scripts/ossie.py notes logical-model/ transformation/tests docs/adr/` | 0 | pass (`0 dangling pointer(s)`) |
+| Semantic tests current | `python3 .agents/skills/semantic-model/scripts/ossie.py generate-tests logical-model/ transformation/tests --check` | 0 | pass (`0 stale`) |
+| Semantic bindings | `python3 .agents/skills/semantic-model/scripts/ossie.py bindings logical-model/ transformation/target/manifest.json` | 0 | pass (0 errors) |
+| Semantic columns | `python3 .agents/skills/semantic-model/scripts/ossie.py columns logical-model/ transformation/target/catalog.json` | 0 | pass (0 errors; 5 warnings, none on the new relation) |
+| Ontology refs | `python3 .agents/skills/semantic-model/scripts/ossie.py refs ontology/ logical-model/` | 0 | pass (warnings only, pre-existing) |
+| Ontology glossary | `python3 .agents/skills/semantic-model/scripts/ossie.py glossary ontology/ CONTEXT.md` | 0 | pass (25 `terms_without_concept`, the existing set plus `Cross-borough trip`) |
+| Baseline cross-check | `not run` | - | `not applicable`: the dbt card's `## Defer` publishes no production manifest for this Domain, so the comparison is unavailable and `/data/cache` was never read |
+
+## Findings
+
+- **`R-02` and `R-05` name a column the built relation does not carry.** They assert on `trip_count`; the relation publishes `billable_trip_count`. The rename happened because the semantic layer writes a bound column's dbt description from the same-named field on the `trips` Ossie dataset, where `trip_count` means "Trips, billable or not." — false on a table of billable trips only (design `D-12`). Every value the two lines assert holds: `sum(billable_trip_count)` is 95,958 and `min(billable_trip_count)` is 1. Amending the two R-lines' wording needs the user's recorded answer, since an approved Requirement changes only that way; the design record and this section carry the reason until then.
+- **`relations/mismatch` on the six `audit_*` contracts** is outside this intent's rows: those relations are landed by the dlt pipelines, which this Intent did not run, so the sandbox does not hold them.
+
 ## Discovery
 
 Discovery at `24a7c40`, read from the Domain warehouse (`target: domain`) and the sandbox copy (`target: ephemeral`). `fct_trip` and `dim_zone` are declared relations, so both were profiled on `domain`; the two type probes ran on `ephemeral` because they read no Domain rows.
@@ -30,7 +87,7 @@ Discovery at `24a7c40`, read from the Domain warehouse (`target: domain`) and th
 
   all_trips_window `97184`, billable_trips `95958`, distinct_billable `95958`.
 
-- **Every billable trip in the window carries a non-null, non-zero `total_amount`, and its total closes against the billable revenue** — so `trip_count` is the count of rows carrying the revenue measure and no separate coverage count is needed.
+- **Every billable trip in the window carries a non-null, non-zero `total_amount`, and its total closes against the billable revenue** — so `billable_trip_count` is the count of rows carrying the revenue measure and no separate coverage count is needed.
 
   ```sql
   select count(*) as billable_trips,
