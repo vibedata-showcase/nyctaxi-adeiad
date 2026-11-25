@@ -1,5 +1,83 @@
 # Verification: Borough-to-borough trips and revenue
 
+## Verification
+
+`verdict: verified` at `9f2d5df7a04b42b1c0277d89b7198ccdb5d7e99a`: every requirement has independent evidence from a query recomputed over `core.fct_trip`, every gate passed except one that fails identically at the merge base for reasons outside this intent's rows, and two design-record claims that did not match the built relation were corrected before this verdict.
+
+Every gate below ran at `22fffe9`; nothing in the impacted paths changed after it — `git diff --stat 22fffe9..9f2d5df -- transformation/ contracts/ repo-map.json test-map.json` is empty, and the only commit in between touches one design record — so the results still name the code that ships.
+
+## Coverage
+
+| Item | Evidence | Result | At |
+| --- | --- | --- | --- |
+| `R-01` three months × 25 cells, 75 rows, 94,723 trips | `select (select count(*) from (select trip_month, origin_borough, destination_borough from agg.agg_borough_flow_monthly group by all)) as distinct_grain_rows, (select count(*) from agg.agg_borough_flow_monthly) as total_rows, (select count(distinct origin_borough) from agg.agg_borough_flow_monthly) as origin_values, (select count(distinct destination_borough) from agg.agg_borough_flow_monthly) as dest_values, (select count(distinct trip_month) from agg.agg_borough_flow_monthly) as months` | 75 distinct grain rows over 75 rows, 5 origins, 5 destinations, 3 months; trips per month 29,568 / 29,650 / 35,505, summing to 94,723 | `22fffe9` |
+| `R-02` billable trips and revenue per cell | `select trip_count, round(total_revenue,2) from agg.agg_borough_flow_monthly where trip_month = date '2024-01-01' and origin_borough = 'Manhattan' and destination_borough = 'Manhattan'` | 24,995 trips, 515,753.34 revenue; Q1 revenue 2,533,885.02 | `22fffe9` |
+| `R-03` population is NYC-borough to NYC-borough only | `with pop as (… join core.dim_zone o … o.is_nyc … join core.dim_zone d … d.is_nyc … where f.is_billable …), allb as (… every billable trip …), grid as (select sum(trip_count), round(sum(total_revenue),2) from agg.agg_borough_flow_monthly) select g.trips, p.trips, a.trips, g.revenue, p.revenue, a.revenue, a.trips - p.trips, round(a.revenue - p.revenue,2) …` | grid 94,723 trips and 2,533,885.02 revenue, exactly the independently counted NYC-borough population; all billable is 95,958 and 2,629,185.82, so 1,235 trips and 95,300.80 are excluded as the Requirement states | `22fffe9` |
+| `R-04` per-origin outbound share with its denominator, recomputed independently | `with indep as (select cast(date_trunc('month', f.pickup_datetime) as date) as trip_month, o.borough_name as origin_borough, sum(case when o.borough_name <> d.borough_name then 1 else 0 end) as cross_ct, count(*) as origin_ct from core.fct_trip f join core.dim_zone o on f.pickup_zone_key = o.zone_key and o.is_nyc join core.dim_zone d on f.dropoff_zone_key = d.zone_key and d.is_nyc where f.is_billable and f.pickup_datetime >= timestamp '2024-01-01' and f.pickup_datetime < timestamp '2024-04-01' group by 1,2), model as (select distinct trip_month, origin_borough, origin_trip_count, cross_borough_trip_count, outbound_cross_borough_share from agg.agg_borough_flow_monthly) select … where m.origin_trip_count <> i.origin_ct or m.cross_borough_trip_count <> i.cross_ct or abs(m.outbound_cross_borough_share - i.cross_ct*1.0/i.origin_ct) > 1e-9` | 0 rows: all 15 origin months match on the numerator, the denominator and the share within 1e-9; January reads Manhattan 5.30%, Queens 70.52%, Brooklyn 37.18%, Bronx 58.88%, Staten Island 40.00% | `22fffe9` |
+| `R-05` zero cells carry zero, no nulls, nothing suppressed | `select count(*) filter (where trip_count = 0) as zero_cells, count(*) filter (where total_revenue = 0) as zero_revenue_cells, count(*) filter (where trip_count is null or total_revenue is null) as null_cells, count(*) as rows from agg.agg_borough_flow_monthly` | 10 zero-trip cells, 10 zero-revenue cells, 0 null cells, 75 rows; also `select trip_month, count(*) filter (where trip_count > 0) … from agg.agg_borough_flow_monthly group by 1` gives 22 / 20 / 23 cells with trips and 3 / 5 / 2 without | `22fffe9` |
+| `R-06` contract, exclusion, semantic gate | `odcs.py check`, `odcs.py diff origin/main`, `odcs.py profile --relation agg.agg_borough_flow_monthly`, and the `ossie.py` chain | all exit 0; the relation appears in `semantic_exclusions` with both reasons and `coverage` reports `0 coverage error(s)` | `22fffe9` |
+| `R-07` grain, zero cells and the share protected by tests | `cd transformation && dbt build --select agg_borough_flow_monthly+ --exclude test_type:unit` and `dbt test --select agg_borough_flow_monthly,test_type:unit` | 14 data tests and 5 unit tests pass; the grain, the month conservation and the share each have their own test | `22fffe9` |
+| Scope row: `agg_borough_flow_monthly.sql` | same build gate | built, `BASE TABLE`, 9 columns in the designed order and types | `22fffe9` |
+| Scope row: `_agg.yml` | same build gate plus `odcs.py check` | the entry carries `contract: {enforced: true}`, every column typed and described | `22fffe9` |
+| Scope row: three singular tests | build gate plus `python3 .github/scripts/adr_lint.py` | all three run and pass | `22fffe9` |
+| Scope row: `repo-map.json` `semantic_exclusions` | `python3 -m pytest tests/test_maps.py -q` | 31 passed, including `test_every_semantic_exclusion_names_a_boundary_relation_and_a_reason` | `22fffe9` |
+| Scope row: `test-map.json` | same map-test gate | 31 passed, both the data and the new unit selector resolving to tests | `22fffe9` |
+| Scope row: `_unit_tests.yml` | `dbt test --select agg_borough_flow_monthly,test_type:unit` | 5 pass | `22fffe9` |
+
+## Gate results
+
+| Gate | Command | Exit | Outcome |
+| --- | --- | --- | --- |
+| Data tests | `cd transformation && dbt build --select agg_borough_flow_monthly+ --exclude test_type:unit --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass — PASS=14, WARN=0, ERROR=0 |
+| Sandbox destination | `python3 <plugin>/scripts/assert_dbt_destination.py` after that build | 0 | pass — `DESTINATION_OK: 1 built relation(s) landed in the sandbox` |
+| Unit tests | `cd transformation && dbt test --select agg_borough_flow_monthly,test_type:unit` | 0 | pass — PASS=5 |
+| Contract check | `python3 .agents/skills/data-contract/scripts/odcs.py check` | 0 | pass — clean |
+| Contract diff | `python3 .agents/skills/data-contract/scripts/odcs.py diff origin/main` | 0 | pass — no finding |
+| Contract profile | `python3 .agents/skills/data-contract/scripts/odcs.py profile --relation agg.agg_borough_flow_monthly --catalog <the sandbox duckdb file>` | 0 | pass — no finding: the composite grain holds and no `required` claim is false |
+| Contract relations | `python3 .agents/skills/data-contract/scripts/odcs.py check --relations --catalog transformation/target/catalog.json` | 1 | fail — six `relations/mismatch` errors, every one on a bronze, mdm_raw or ops_raw **source** contract ("the catalog holds no such relation"); none on this intent's relation. Pre-existing: the same command at the merge base in a detached worktree returns the same six errors on the same relations. A dbt catalog holds models only, never dlt-loaded sources, so this gate cannot pass for a source contract on this platform. |
+| Semantic validate | `python3 .agents/skills/semantic-model/scripts/ossie.py validate logical-model/` | 0 | pass |
+| Semantic coverage | `python3 .agents/skills/semantic-model/scripts/ossie.py coverage logical-model/ <four boundary roots> --exclude agg.agg_od_flow_matrix --exclude finance.mart_revenue_component_bridge --exclude core.dim_fare_regime --exclude agg.agg_borough_flow_monthly` | 0 | pass — 35 models on disk, 31 named, 0 coverage errors |
+| Semantic suppliers | `python3 .agents/skills/semantic-model/scripts/ossie.py suppliers logical-model/` | 0 | pass — 0 unsupplied |
+| Semantic notes | `python3 .agents/skills/semantic-model/scripts/ossie.py notes logical-model/ transformation/tests docs/adr` | 0 | pass — 0 dangling, 0 unchecked |
+| Generated tests | `python3 .agents/skills/semantic-model/scripts/ossie.py generate-tests logical-model/ transformation/tests --check` | 0 | pass — 3 generated, 0 stale |
+| Ontology validate | `python3 .agents/skills/semantic-model/scripts/ossie.py validate ontology/` | 0 | pass — 0 errors, 0 warnings |
+| Ontology refs | `python3 .agents/skills/semantic-model/scripts/ossie.py refs ontology/ logical-model/` | 0 | pass — 2 mappings, 0 errors, 2 warnings; the same two warnings at the merge base, so unchanged by this intent |
+| Ontology glossary | `python3 .agents/skills/semantic-model/scripts/ossie.py glossary ontology/ CONTEXT.md` | 0 | pass |
+| Project audit | `cd transformation && dbt build --select package:dbt_project_evaluator --vars '{dbt_project_evaluator_enabled: true}' --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass — PASS=66, WARN=12, ERROR=0; the warnings are the suite's twelve `is_empty_*` and `valid_test_coverage` checks, none naming the new relation |
+| Sandbox destination after the audit | `python3 <plugin>/scripts/assert_dbt_destination.py` | 0 | pass — `DESTINATION_OK: 49 built relation(s) landed in the sandbox` |
+| Python tests | `python3 -m pytest tests -q` | 0 | pass — 223 passed |
+| Python lint | `ruff check .` | 0 | pass — all checks passed |
+| SQL lint | `sqlfluff lint transformation/models` | 0 | pass |
+| ADR lint | `python3 .github/scripts/adr_lint.py` | 0 | pass — no duplicate numbers, no dangling references |
+| Dev-artifact scan | inspection of the diff `1184020d..22fffe9` | 0 | pass — no `dev_mode`, no `.add_limit()`, no hard-coded environment id, no edited profile target |
+| Baseline cross-check | `not applicable` — the DuckDB platform card's `## Defer` says no production manifest is published, so `/data/cache` was never read and `state:modified` was not run |
+
+## Scope check
+
+The intent changed 18 files and no other. `git diff --name-only 1184020d..HEAD` lists only: the new model, its properties entry, its unit tests, its three singular tests, its ODCS contract, `repo-map.json`, `test-map.json`, `CONTEXT.md`, ADR 0018, the four ADRs that gained the design-record back-link, and this intent's Requirement, design record, Plan and Verification. No published model's SQL changed: `git diff --stat 1184020d..HEAD -- transformation/models/marts/core transformation/models/marts/finance transformation/models/marts/ops transformation/models/marts/agg/agg_od_flow_matrix.sql transformation/dbt_project.yml` is empty. `list_changes` reports the new asset and its ancestors' test-change notices, and no consumer reached.
+
+## Words against the data
+
+Checked every statement this intent wrote:
+
+- `ADR 0018`'s "Nine of January's 25 borough cells carry fewer than 25 trips, so a floor here would publish 13 cells" — queried at `22fffe9`: 25 cells, 22 with trips, 9 of those under 25 trips, 13 at or above. Agrees.
+- `ADR 0018`'s zero-cell rule — 10 zero cells exist and every one carries 0 revenue, no null (query above).
+- `CONTEXT.md`'s **Cross-borough trip** — matches the `is_cross_borough` expression in the built SQL (`origin_borough <> destination_borough`).
+- The model description's population and exclusion claims — match the two `is_nyc` joins and the `is_billable` filter, and the 1,235 excluded trips reconcile to the difference between the grid total and all billable trips.
+- The relation's materialisation and grain — `BASE TABLE`, one row per (month, origin, destination).
+
+Two statements did **not** match and were corrected before this verdict, recorded as design decisions `D-13` and `D-14`:
+
+- `D-03` claimed `is_unresolved_zone` "is redundant against `is_nyc`". That is a measurement, which a design record may not hold; it also has an exception. Querying `core.dim_zone` shows 269 zones with `is_nyc` true and `is_unresolved_zone` false, 2 with `is_unresolved_zone` true and `is_nyc` false, and 1 with both false (EWR) — so the flags do align today, but the claim belongs in the Verification, not the record. `D-14` restates it as the rule only.
+- `D-11` claimed a `unique` test on the composite grain and one singular test. Neither was built: a composite key has no single-column `unique` in dbt without `dbt_utils`, and three singular tests landed. `D-13` corrects `D-11` to the built test set.
+
+A third correction was made before execution: the design's `D-12` removed the duplicate month column `trip_month_start_date`. `D-10` now lists the nine columns actually built.
+
+## Limited
+
+- The `check --relations` contract gate stays red for every source contract on this platform, for the reason recorded above. That failure is outside this intent's rows and returns nothing.
+- `agg.agg_borough_flow_monthly` is outside the semantic layer by design (`D-07`): its population is not statable from the `trips` dataset's own fields and its share is not additive across rows. A consumer asking a canonical metric question about borough-to-borough movement is answered by the `trips` star's detail source, which the `## Discovery` section records working.
+
 ## Discovery
 
 Recorded during design. Each result is the query exactly as it ran against `domain`.
@@ -14,3 +92,4 @@ Recorded during design. Each result is the query exactly as it ran against `doma
 - Billable revenue and payment-method-recognised revenue differ by about 1.2% a month, which is why the choice was asked: January 814,780.86 against 805,326.52, February 812,329.21 against 802,407.58, March 998,524.68 against 986,590.20. — `select date_trunc('month', f.pickup_datetime)::date as mth, count(*) as billable_trips, round(sum(f.total_amount),2) as billable_revenue, count(*) filter (where p.counts_as_revenue) as recognised_trips, round(sum(case when p.counts_as_revenue then f.total_amount else 0 end),2) as recognised_revenue from core.fct_trip f join core.dim_payment_method p on f.payment_method_key = p.payment_method_key where f.is_billable and f.pickup_datetime >= timestamp '2024-01-01' and f.pickup_datetime < timestamp '2024-04-01' group by 1 order by 1`
 - Every trip's zone surrogate is the version in force on its own pickup date, so the two zone joins do not multiply rows: 0 trips fall outside their zone's half-open validity interval. — `select count(*) as trips_with_overlapping_zone_versions from core.fct_trip f join core.dim_zone z on f.pickup_zone_key=z.zone_key where not (f.pickup_datetime >= z.valid_from_date and f.pickup_datetime < z.valid_to_date + 1)`
 - The canonical star already answers month × origin borough × destination borough through its detail source, and no aggregate source can: the compiler chose `LTS1_detail` and rejected all seven aggregate sources, the zone-bearing ones because rolling a versioned zone up from an aggregate needs the fact's date. January's Bronx→Bronx cell reads 44 billable trips and 1,085.21 revenue both from the star and from the independent query above. — `semantic_query` on `nyc_taxi_trips`, metrics `billable_trip_count`, `billable_revenue`, group by `trips_to_date`/`month`, `trips_to_pickup_zone`/`borough`, `trips_to_dropoff_zone`/`borough`.
+- `dim_zone`'s two borough flags line up in the current master data: 269 zones are `is_nyc` true with `is_unresolved_zone` false, 2 are unresolved with `is_nyc` false, and 1 (EWR) is neither. `is_nyc` alone therefore selects exactly the five NYC boroughs today. — `select is_unresolved_zone, is_nyc, count(*) as zones from core.dim_zone group by 1,2 order by 1,2`
