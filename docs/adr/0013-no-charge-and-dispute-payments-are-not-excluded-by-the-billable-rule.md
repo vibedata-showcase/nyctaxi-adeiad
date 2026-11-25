@@ -22,3 +22,4 @@ The billable rule (ADR 0003) looks only at the total amount, so a no-charge or d
 
 - [`models/core/fct_trip.md`](../design/models/core/fct_trip.md)
 - [`models/intermediate/int_trip_quality_flags.md`](../design/models/intermediate/int_trip_quality_flags.md)
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)

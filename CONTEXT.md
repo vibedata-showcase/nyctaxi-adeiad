@@ -76,6 +76,16 @@ The trips between one pickup zone and one dropoff zone.
 **Published flow**:
 An origin-destination pair with at least 25 billable trips in the reporting window, the population the origin-destination matrix reports (ADR 0017). Narrower than a flow: a pair below the floor exists in the trips but is not published.
 
+**Borough flow**:
+The trips between one borough and another, both ends in a New York City borough. A trip that ends in the out-of-state airport or in a zone no borough resolves is no borough flow, though it is still a trip.
+
+**Published borough flow**:
+The borough pairs the borough flow surface reports, and the population its share is measured over (ADR 0018, ADR 0019). Narrower than a borough flow: a pair below the floor or with an end outside the city exists in the trips but is not published.
+
+**Cross-borough share**:
+The share of a borough's published trips that end in a different borough. It describes the published surface, not all the borough's traffic, so a borough whose cross-borough pairs are thin reads low.
+_Not_: cross-borough rate, because a rate reads as a property of the traffic and this one is a property of what is published.
+
 **Medallion**:
 The licence to operate a taxi. It is transferable: the licence outlives the vehicle it currently covers and the driver who currently holds it, so it is neither of them.
 _Not_: the bronze, silver and gold layering, which is a platform term defined elsewhere.
