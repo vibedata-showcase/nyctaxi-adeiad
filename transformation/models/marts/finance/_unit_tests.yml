@@ -1,0 +1,33 @@
+version: 2
+
+unit_tests:
+  # --- mart_daily_zone_revenue: the billable select and its one filter ------
+  - name: daily_zone_revenue_drops_a_no_billable_zone_day
+    description: >
+      A zone-day the aggregate carries with no billable trip is not part of the
+      report: two of three source rows survive, and the surviving measures take
+      the report's own column names from the billable ones.
+    model: mart_daily_zone_revenue
+    given:
+      - input: ref('agg_trip_zone_daily')
+        rows:
+          - {pickup_date: '2024-01-01', pickup_location_id: 132, zone_name: JFK Airport, borough_name: Queens, reporting_region: Airports, trip_count: 5, total_revenue: 100.0, billable_trip_count: 4, billable_fare_revenue: 70.0, billable_tip_revenue: 12.0, billable_surcharge_revenue: 8.0, billable_toll_revenue: 2.0, billable_total_revenue: 92.0}
+          - {pickup_date: '2024-01-01', pickup_location_id: 7, zone_name: Astoria, borough_name: Queens, reporting_region: Outer Boroughs, trip_count: 1, total_revenue: -12.0, billable_trip_count: 0, billable_fare_revenue: 0.0, billable_tip_revenue: 0.0, billable_surcharge_revenue: 0.0, billable_toll_revenue: 0.0, billable_total_revenue: 0.0}
+          - {pickup_date: '2024-01-02', pickup_location_id: 132, zone_name: JFK Airport, borough_name: Queens, reporting_region: Airports, trip_count: 3, total_revenue: 60.0, billable_trip_count: 3, billable_fare_revenue: 45.0, billable_tip_revenue: 8.0, billable_surcharge_revenue: 5.0, billable_toll_revenue: 1.0, billable_total_revenue: 59.0}
+    expect:
+      rows:
+        - {trip_date: '2024-01-01', pickup_location_id: 132, borough: Queens, zone_name: JFK Airport, reporting_region: Airports, trip_count: 4, fare_revenue: 70.0, tip_revenue: 12.0, surcharge_revenue: 8.0, toll_revenue: 2.0, total_revenue: 92.0}
+        - {trip_date: '2024-01-02', pickup_location_id: 132, borough: Queens, zone_name: JFK Airport, reporting_region: Airports, trip_count: 3, fare_revenue: 45.0, tip_revenue: 8.0, surcharge_revenue: 5.0, toll_revenue: 1.0, total_revenue: 59.0}
+
+  - name: daily_zone_revenue_carries_the_billable_count_not_the_all_trips_count
+    description: >
+      `trip_count` is the billable count: a zone-day with five trips of which
+      four are billable reports four, so a wrong source column is caught.
+    model: mart_daily_zone_revenue
+    given:
+      - input: ref('agg_trip_zone_daily')
+        rows:
+          - {pickup_date: '2024-02-01', pickup_location_id: 161, zone_name: Midtown Center, borough_name: Manhattan, reporting_region: Manhattan Core, trip_count: 5, total_revenue: 100.0, billable_trip_count: 4, billable_fare_revenue: 70.0, billable_tip_revenue: 12.0, billable_surcharge_revenue: 8.0, billable_toll_revenue: 2.0, billable_total_revenue: 92.0}
+    expect:
+      rows:
+        - {trip_date: '2024-02-01', pickup_location_id: 161, trip_count: 4, total_revenue: 92.0}
