@@ -171,6 +171,7 @@ models:
       trip floor is applied (ADR 0018). cross_borough_share is the origin
       borough's cross-borough trips over all its trips that month, so it
       repeats on each of that borough's rows.
+    access: protected
     contract: {enforced: true}
     columns:
       - name: trip_month
