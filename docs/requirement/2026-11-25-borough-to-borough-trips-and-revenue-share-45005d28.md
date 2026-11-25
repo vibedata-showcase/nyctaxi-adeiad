@@ -54,3 +54,4 @@ None. How the no-pair origin borough-month is represented (a null destination bo
 ## Approvals
 - 2026-11-25T03:53:35Z — requirement approved — "Approve — continue to design" — ad6ef77
 - 2026-11-25T04:17:34Z — design approved — "Approve — continue to plan" — 980930d
+- 2026-11-25T06:04:33Z — ship approved — "Approve — open the pull request" — 175df0d
