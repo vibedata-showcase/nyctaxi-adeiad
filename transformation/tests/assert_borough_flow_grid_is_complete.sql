@@ -26,9 +26,10 @@ expected as (
 select e.trip_month, e.origin_borough, e.dest_borough
 from expected e
 left join {{ ref('agg_borough_flow_monthly') }} a
-    on e.trip_month = a.trip_month
-    and e.origin_borough = a.origin_borough
-    and e.dest_borough = a.dest_borough
+    on
+        e.trip_month = a.trip_month
+        and e.origin_borough = a.origin_borough
+        and e.dest_borough = a.dest_borough
 where a.trip_month is null
 
 union all
@@ -36,7 +37,8 @@ union all
 select a.trip_month, a.origin_borough, a.dest_borough
 from {{ ref('agg_borough_flow_monthly') }} a
 left join expected e
-    on e.trip_month = a.trip_month
-    and e.origin_borough = a.origin_borough
-    and e.dest_borough = a.dest_borough
+    on
+        e.trip_month = a.trip_month
+        and e.origin_borough = a.origin_borough
+        and e.dest_borough = a.dest_borough
 where e.trip_month is null

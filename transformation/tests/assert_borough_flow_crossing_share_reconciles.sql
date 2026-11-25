@@ -25,12 +25,16 @@ with model_origin as (
 
 recount as (
     select
-        date_trunc('month', f.pickup_date)::date as trip_month,
+        cast(date_trunc('month', f.pickup_date) as date) as trip_month,
         coalesce(o.borough_name, 'unresolved') as origin_borough,
         coalesce(o.is_unresolved_zone, true) as origin_is_unresolved,
         cast(count(*) as bigint) as origin_trip_count,
-        cast(count(*) filter (where not coalesce(d.is_unresolved_zone, true)) as bigint) as resolved_destination_trip_count,
-        cast(count(*) filter (where coalesce(d.is_unresolved_zone, true)) as bigint) as unresolved_destination_trip_count,
+        cast(count(*) filter (
+            where not coalesce(d.is_unresolved_zone, true)
+        ) as bigint) as resolved_destination_trip_count,
+        cast(count(*) filter (
+            where coalesce(d.is_unresolved_zone, true)
+        ) as bigint) as unresolved_destination_trip_count,
         case
             when coalesce(o.is_unresolved_zone, true) then null
             else cast(count(*) filter (
@@ -57,8 +61,9 @@ origin_mismatch as (
         m.crossing_share as model_share
     from model_origin m
     full join recount r
-        on m.trip_month = r.trip_month
-        and m.origin_borough = r.origin_borough
+        on
+            m.trip_month = r.trip_month
+            and m.origin_borough = r.origin_borough
     where
         -- The model is a grid, so it may hold an origin group the fact has no
         -- trip for; that row must be all zeros against a missing recount. The
@@ -78,7 +83,7 @@ origin_mismatch as (
         -- null numerator (an unplaceable origin) reconciles with zero such rows
         or coalesce(m.row_crossing_trip_count, 0) is distinct from coalesce(m.crossing_trip_count, 0)
         or m.origin_trip_count is distinct from
-            m.resolved_destination_trip_count + m.unresolved_destination_trip_count
+        m.resolved_destination_trip_count + m.unresolved_destination_trip_count
         or case
             when m.origin_is_unresolved then m.crossing_share is not null
             when m.resolved_destination_trip_count = 0 then m.crossing_share is not null
@@ -86,8 +91,14 @@ origin_mismatch as (
         end
 )
 
-select trip_month, origin_borough, model_origin_trips, recount_origin_trips,
-       model_crossing, recount_crossing, model_share
+select
+    trip_month,
+    origin_borough,
+    model_origin_trips,
+    recount_origin_trips,
+    model_crossing,
+    recount_crossing,
+    model_share
 from origin_mismatch
 
 union all

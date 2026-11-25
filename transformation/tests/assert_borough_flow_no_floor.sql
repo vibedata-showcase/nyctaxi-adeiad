@@ -20,7 +20,8 @@ with held_pairs as (
 select h.trip_month, h.origin_borough, h.dest_borough
 from held_pairs h
 left join {{ ref('agg_borough_flow_monthly') }} a
-    on h.trip_month = a.trip_month
-    and h.origin_borough = a.origin_borough
-    and h.dest_borough = a.dest_borough
+    on
+        h.trip_month = a.trip_month
+        and h.origin_borough = a.origin_borough
+        and h.dest_borough = a.dest_borough
 where a.trip_month is null or a.trip_count = 0
