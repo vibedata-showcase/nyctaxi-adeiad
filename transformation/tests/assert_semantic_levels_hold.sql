@@ -366,6 +366,45 @@ where
 union all
 
 select distinct
+    'trips.LTS10_borough_flow_month: trips_to_date month key is no member' as finding,
+    cast(a.month_start_date as {{ dbt.type_string() }}) as member_key
+from {{ ref('agg_borough_flow_monthly') }} as a
+where
+    a.month_start_date is not null
+    and not exists (
+        select 1 from {{ ref('dim_date') }} as d
+        where d.month_start_date = a.month_start_date
+    )
+
+union all
+
+select distinct
+    'trips.LTS10_borough_flow_month: trips_to_pickup_zone borough key is no member' as finding,
+    cast(a.origin_borough as {{ dbt.type_string() }}) as member_key
+from {{ ref('agg_borough_flow_monthly') }} as a
+where
+    a.origin_borough is not null
+    and not exists (
+        select 1 from {{ ref('dim_zone') }} as d
+        where d.borough_name = a.origin_borough
+    )
+
+union all
+
+select distinct
+    'trips.LTS10_borough_flow_month: trips_to_dropoff_zone borough key is no member' as finding,
+    cast(a.dest_borough as {{ dbt.type_string() }}) as member_key
+from {{ ref('agg_borough_flow_monthly') }} as a
+where
+    a.dest_borough is not null
+    and not exists (
+        select 1 from {{ ref('dim_zone') }} as d
+        where d.borough_name = a.dest_borough
+    )
+
+union all
+
+select distinct
     'shift.LTS2_driver_day: shift_to_date day key is no member' as finding,
     cast(a.shift_date as {{ dbt.type_string() }}) as member_key
 from {{ ref('agg_driver_daily') }} as a
