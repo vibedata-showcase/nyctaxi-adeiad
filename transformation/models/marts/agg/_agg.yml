@@ -539,3 +539,49 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+  - name: agg_borough_flow_monthly
+    description: >
+      Borough-to-borough flow by month, with each origin borough's crossing
+      share. One row per calendar month, origin borough and destination
+      borough, published only for pairs carrying at least 25 billable trips in
+      that month (ADR 0018); plus one row per origin borough-month that carries
+      no such pair, with a null dest_borough and a zero trip and revenue total,
+      so its crossing share is still published.
+      The three origin_* share columns are taken over that borough-month's whole
+      billable traffic, published pair or not (ADR 0019), and repeat on every
+      row of the borough-month: the share therefore does not reconcile with the
+      pair rows beside it, and summing trip_count or total_revenue here
+      undercuts the network by every pair below the floor. Unresolved zones
+      appear as their own N/A and Unknown borough groups (ADR 0012).
+    contract: {enforced: true}
+    columns:
+      - name: trip_month
+        data_type: DATE
+        description: First day of the calendar month the trips were picked up in; the month key.
+        data_tests: [not_null]
+      - name: origin_borough
+        data_type: VARCHAR
+        description: Borough of the pickup zone, as dim_zone names it. The unresolved zones appear as their own N/A and Unknown borough groups (ADR 0012).
+        data_tests: [not_null]
+      - name: dest_borough
+        data_type: VARCHAR
+        description: Borough of the dropoff zone. Null only on a no-pair row, which publishes an origin borough-month that carries no pair at or above the floor.
+      - name: trip_count
+        data_type: BIGINT
+        description: Billable trips on the pair in that month; at least 25, since smaller pairs are not published (ADR 0018), and 0 on a no-pair row. Summing it undercuts the network by every pair under the floor.
+        data_tests: [not_null]
+      - name: total_revenue
+        data_type: DOUBLE
+        description: Sum of total_amount over the pair's billable trips, counting no-charge and dispute payments (ADR 0013), and 0 on a no-pair row.
+        data_tests: [not_null]
+      - name: origin_departing_trip_count
+        data_type: BIGINT
+        description: 'Every billable trip departing the origin borough in that month, whether its pair is published or not: the denominator of the crossing share (ADR 0019).'
+        data_tests: [not_null]
+      - name: origin_crossing_trip_count
+        data_type: BIGINT
+        description: 'Every departing billable trip of that borough-month whose destination borough differs from the origin borough, published pair or not: the numerator of the crossing share (ADR 0019).'
+        data_tests: [not_null]
+      - name: origin_crossing_trip_share
+        data_type: DOUBLE
+        description: origin_crossing_trip_count divided by origin_departing_trip_count, repeated on every row of the borough-month; null when the denominator is zero. It does not reconcile with the pair rows beside it (ADR 0019).

@@ -141,6 +141,10 @@
       "reason": "Not a star member: a HAVING floor keeps only well-populated origin-destination pairs (ADR 0017), so it is a filtered population, not the full set of trips; a model over it would mislead."
     },
     {
+      "relation": "agg.agg_borough_flow_monthly",
+      "reason": "Not a star member: a HAVING floor keeps only borough pairs carrying at least 25 billable trips in their month (ADR 0018), so the pair rows are a filtered population, and a borough-month with no qualifying pair adds a second grain to the same relation with a null destination borough; no logical source answers from it honestly."
+    },
+    {
       "relation": "finance.mart_revenue_component_bridge",
       "reason": "Unpivot of fare components into one row per component: summing its measures across trips fans out, so it cannot be a fact in a star."
     },
