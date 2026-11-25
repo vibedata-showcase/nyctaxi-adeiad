@@ -43,11 +43,11 @@
 
 **Requirements:** `R-06` · **Design:** `docs/design/models/agg/agg_borough_flow_monthly.md` · **Skill:** `data-contract` · **Depends on:** none
 
-- [ ] Author `contracts/agg/agg_borough_flow_monthly.odcs.yaml` with `status: proposed`, `version: 0.1.0`, and one property per published column with its description, `logicalType` and `physicalType`: `trip_month` (date / `DATE`), `origin_borough` (string / `VARCHAR`), `dest_borough` (string / `VARCHAR`), `trip_count` (integer / `BIGINT`), `total_revenue` (number / `DOUBLE`), `cross_borough_trip_count` (integer / `BIGINT`), `cross_borough_share` (number / `DOUBLE`).
-- [ ] State the grain as the composite key `[trip_month, origin_borough, dest_borough]` and mark `trip_month`, `origin_borough`, `dest_borough` and `trip_count` `required`; `cross_borough_share` is not required because a zero denominator yields null (`D-09`).
-- [ ] Run `python3 .agents/skills/data-contract/scripts/odcs.py check`; expect exit 0 with the shape checks passing for a `proposed` contract.
-- [ ] Record the `R-06` acceptance condition reached so far: `check` reports the schema block valid and no blocking finding. Its dynamic half runs in Task 3, once the relation exists.
-- [ ] Commit and push `contracts/agg/agg_borough_flow_monthly.odcs.yaml`.
+- [x] Author `contracts/agg/agg_borough_flow_monthly.odcs.yaml` with `status: proposed`, `version: 0.1.0`, and one property per published column with its description, `logicalType` and `physicalType`: `trip_month` (date / `DATE`), `origin_borough` (string / `VARCHAR`), `dest_borough` (string / `VARCHAR`), `trip_count` (integer / `BIGINT`), `total_revenue` (number / `DOUBLE`), `cross_borough_trip_count` (integer / `BIGINT`), `cross_borough_share` (number / `DOUBLE`).
+- [x] State the grain as the composite key `[trip_month, origin_borough, dest_borough]` and mark `trip_month`, `origin_borough`, `dest_borough` and `trip_count` `required`; `cross_borough_share` is not required because a zero denominator yields null (`D-09`).
+- [x] Run `python3 .agents/skills/data-contract/scripts/odcs.py check`; expect exit 0 with the shape checks passing for a `proposed` contract.
+- [x] Record the `R-06` acceptance condition reached so far: `check` reports the schema block valid and no blocking finding. Its dynamic half runs in Task 3, once the relation exists.
+- [x] Commit and push `contracts/agg/agg_borough_flow_monthly.odcs.yaml`.
 
 ### Task 2: the model, its properties, its unit tests and its singular tests
 
@@ -86,3 +86,6 @@
 - [ ] Commit and push the Ossie document, the regenerated semantic tests and the contract's `active` status.
 
 ## Execution evidence
+
+- Task 1: `python3 .agents/skills/data-contract/scripts/odcs.py version` — exit 0 — package `0.2.8`, spec `v3.2.0`.
+- Task 1: `python3 .agents/skills/data-contract/scripts/odcs.py check` — exit 0 — three `info` `boundary/excluded` findings for existing contracts, none for `agg_borough_flow_monthly`; the proposed contract's shape passes. Artifact `contracts/agg/agg_borough_flow_monthly.odcs.yaml` — sha256:c044aa35e15d9f58ad98f3d6fc0ebb29d1445caad74eef0b12cb229a1ec85b2d
