@@ -2,7 +2,7 @@
 
 ## Verification
 
-`verdict: verified` at `e485f2f`: `agg.agg_borough_flow_monthly` publishes 122 month × borough-pair rows that match an independent recomputation from `fct_trip` + `dim_zone` on every row's trips and revenue, close to the star at the month level to the cent, and carry a cross-borough share that reproduces the independently computed ratio for all 24 origin × month groups; every gate passed.
+`verdict: verified` at `451e19e`: `agg.agg_borough_flow_monthly` publishes 122 month × borough-pair rows that match an independent recomputation from `fct_trip` + `dim_zone` on every row's trips and revenue, close to the star at the month level to the cent, and carry a cross-borough share that reproduces the independently computed ratio for all 24 origin × month groups; every gate passed. Originally verified at `e485f2f`; re-run in full at `451e19e`, which changed only design-record and Plan prose and no data artifact, and every gate and acceptance check reproduced.
 
 ## Coverage
 
@@ -49,6 +49,8 @@ Golden baseline: none is configured for this relation, so every row above stands
 | Manifest breaking delta | `python .../scripts/diff_manifest_contract.py --materialize 1184020 transformation .agents_tmp/base-manifest.json --deps` then `python .../scripts/diff_manifest_contract.py .agents_tmp/base-manifest.json transformation/target/manifest.json` | 0 | pass — `weaker: []`; the only entry is `stronger`: a new enforced contract on `agg_borough_flow_monthly`. No removed or retyped column, so no breaking-contract stop |
 | Domain sweep | `grep -n "Cross-borough" CONTEXT.md`; `ls docs/adr/0018*` | 0 | pass — domain sweep: nothing new; the term `cross-borough trip` and ADR 0018 landed in the design commit, and the final descriptions were corrected to the built column names in this turn |
 | Publication | `gh pr list --head intent/new-intent-f5dd5bf8 --state open --json number,url,headRefName,baseRefName`; then `gh pr view 14 --json number,url,state,headRefName,baseRefName` | 0 | pass — pull request https://github.com/vibedata-showcase/nyctaxi-adeiad/pull/14, `state: OPEN`, head `intent/new-intent-f5dd5bf8`, base `main` |
+
+| Re-verification pass | the full gate set and every acceptance query, re-run at `451e19e` | 0 | pass — `dbt build` PASS=14, unit PASS=1, `odcs.py check`, five semantic gates, three ontology gates, `adr_lint`, `ossie_lint`, `ruff`, `sqlfluff`: all exit 0; `pytest tests -q` 222 passed; acceptance re-read: 0 duplicate grain, 0 value mismatches over 122 rows, month totals equal to the star, 24/24 shares matching with one value per group, 8/8 borough groups with 0 inconsistent flags |
 
 ## Discovery
 
