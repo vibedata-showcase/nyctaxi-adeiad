@@ -1,0 +1,52 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: 2e996a41-9ab4-4ccd-8cbb-38658c10e446
+name: agg_borough_flow_monthly
+version: 1.0.0
+status: proposed
+servers:
+  - server: sample-nyctaxi-comp
+    type: duckdb
+    database: domain.duckdb
+    schema: agg
+schema:
+  - name: agg_borough_flow_monthly
+    dataGranularityDescription: One row per month, origin borough and destination borough that carries at least one billable trip in the reporting window, with no trip floor (ADR 0018).
+    properties:
+      - name: trip_month
+        description: "Calendar month of the trip's pickup, as its first date."
+        logicalType: date
+        physicalType: DATE
+        primaryKey: true
+        required: true
+      - name: origin_borough
+        description: "Borough of the pickup zone, as the zone master carries it; 'Unknown' and 'N/A' are unresolved zones."
+        logicalType: string
+        physicalType: VARCHAR
+        primaryKey: true
+        required: true
+      - name: dest_borough
+        description: "Borough of the dropoff zone, as the zone master carries it; 'Unknown' and 'N/A' are unresolved zones."
+        logicalType: string
+        physicalType: VARCHAR
+        primaryKey: true
+        required: true
+      - name: trip_count
+        description: "Billable trips picked up in the month that ran from the origin borough to the destination borough."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+      - name: total_revenue
+        description: "Sum of total_amount over those billable trips."
+        logicalType: number
+        physicalType: DOUBLE
+        required: true
+      - name: cross_borough_trip_count
+        description: "Those trips ending in a borough other than the one they started in; zero on a same-borough row."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+      - name: cross_borough_share
+        description: "The origin borough's cross-borough trips over all its trips that month, so it repeats on each of that borough's rows. A ratio of sums, never an average of per-pair ratios (ADR 0016)."
+        logicalType: number
+        physicalType: DOUBLE
