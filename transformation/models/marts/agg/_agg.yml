@@ -539,3 +539,69 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+  - name: agg_borough_flow_monthly
+    description: >
+      Borough-to-borough flow, monthly: billable trips and their revenue from
+      each origin borough to each destination borough, with the share of the
+      origin's trips that end in a different borough. Every pair is published,
+      however thin, so the table's totals reconcile to the fact -- unlike the
+      zone-pair matrix, which ADR 0017's floor truncates (ADR 0018). The grid is
+      every month of the reporting window crossed with the nine borough groups,
+      so a pair with no billable trip in a month is a zero row rather than an
+      absent one. A zone the TLC cannot place keeps its own group (ADR 0012), and
+      a trip whose zone key matches no dimension row groups as 'unresolved'
+      rather than disappearing (ADR 0015). The crossing columns describe the
+      origin and month, repeat on every destination row of that origin, and are
+      never summed across them.
+    access: public
+    contract: {enforced: true}
+    columns:
+      - name: trip_month
+        data_type: DATE
+        description: First day of the calendar month the trips were picked up in.
+        data_tests: [not_null]
+      - name: origin_borough
+        data_type: VARCHAR
+        description: Borough the trip started in, or 'unresolved' when no zone places the pickup.
+        data_tests: [not_null]
+      - name: dest_borough
+        data_type: VARCHAR
+        description: Borough the trip ended in, or 'unresolved' when no zone places the dropoff.
+        data_tests: [not_null]
+      - name: origin_is_unresolved
+        data_type: BOOLEAN
+        description: 'True when the origin does not resolve to a borough: the unresolved group for a pickup no dimension row matches, or a borough the TLC cannot place (Unknown, N/A).'
+        data_tests: [not_null]
+      - name: dest_is_unresolved
+        data_type: BOOLEAN
+        description: 'True when the destination does not resolve to a borough: the unresolved group for a dropoff no dimension row matches, or a borough the TLC cannot place (Unknown, N/A).'
+        data_tests: [not_null]
+      - name: is_cross_borough
+        data_type: BOOLEAN
+        description: True when the destination borough differs from the origin borough; null when either end does not resolve to a borough, because a trip touching a zone the TLC cannot place is not evidence of crossing either way.
+      - name: trip_count
+        data_type: BIGINT
+        description: Trips, billable or not.
+        data_tests: [not_null]
+      - name: total_revenue
+        data_type: DOUBLE
+        description: Sum of the trips' total amounts from the origin group to the destination group in the month, at the cent.
+        data_tests: [not_null]
+      - name: origin_trip_count
+        data_type: BIGINT
+        description: 'Billable trips that started in the origin group in the month, whatever their destination. A property of the origin and month: it repeats on every destination row and must never be summed across them.'
+        data_tests: [not_null]
+      - name: resolved_destination_trip_count
+        data_type: BIGINT
+        description: Origin trips whose destination resolves to a borough, the denominator of crossing_share. Repeats on every destination row of the origin and must never be summed across them.
+        data_tests: [not_null]
+      - name: unresolved_destination_trip_count
+        data_type: BIGINT
+        description: Origin trips whose destination resolves to no borough, excluded from crossing_share. Repeats on every destination row of the origin and must never be summed across them.
+        data_tests: [not_null]
+      - name: crossing_trip_count
+        data_type: BIGINT
+        description: Origin trips that ended in a different borough, counting only trips whose destination resolves to a borough, the numerator of crossing_share. Null when the origin does not resolve to a borough, because no crossing can be attributed to a zone the source cannot place. Repeats on every destination row of the origin.
+      - name: crossing_share
+        data_type: DOUBLE
+        description: crossing_trip_count divided by resolved_destination_trip_count, as a fraction between 0 and 1; null when the origin does not resolve to a borough, because no crossing can be attributed to a zone the source cannot place. Repeats on every destination row of the origin.

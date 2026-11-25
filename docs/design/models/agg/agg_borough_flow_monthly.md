@@ -26,8 +26,9 @@ One row per (trip month, origin borough group, destination borough group), over 
 - `D-08` The share is null for a row whose origin does not resolve to a borough: a zone the source cannot place is not "the borough they started in", so no crossing can be attributed to it. The counts on that row are still published. Source: `R-04`, user answer "Resolved ends only".
 - `D-09` `EWR` is a resolved borough group, so a trip between it and a New York borough is a crossing. It is a real `dim_zone` borough in the `Out of State` region, not an unresolved zone. Source: `R-05`, repository (`core.dim_zone`).
 - `D-10` The crossing count, the resolved-destination count, the unresolved-destination count and the share are per (month, origin borough) and are therefore repeated on every destination row of that origin. They must never be summed across destination rows; the trip and revenue columns are the only pair-level measures. Source: `R-04`.
-- `D-11` `is_cross_borough` states, per row, whether the two borough groups differ, mirroring `is_intra_borough` on the zone-pair matrix, so a consumer filters crossing traffic without comparing two strings. Source: `R-04`, request ("trips that leave the borough they started in").
+- `D-11` `is_cross_borough` states, per row, whether the two borough groups differ, mirroring `is_intra_borough` on the zone-pair matrix, so a consumer filters crossing traffic without comparing two strings. It is null when either end does not resolve to a borough, for the same reason the share is: the flag must not assert a crossing the share excludes. Source: `R-04`, request ("trips that leave the borough they started in").
 - `D-12` Each role carries a boolean saying the group is unresolved, rather than leaving a consumer to recognise the values `Unknown` and `N/A` by name. A rollup that must exclude unresolved zones can then filter a column instead of matching strings. Source: `R-05`, [ADR 0012](../../adr/0012-unresolved-zones-are-retained-and-flagged.md).
+- `D-14` "Resolved" means placed in a borough by the TLC. `Unknown` and `N/A` are borough values in `dim_zone`, so they keep their own groups and their trips stay in the counts and revenue, but they are not resolved: they are read from `is_unresolved_zone` rather than matched by name, and they leave the crossing share's numerator and denominator exactly as the `unresolved` group does. Source: `R-04`, `R-05`, user answer "Resolved ends only", [ADR 0012](../../adr/0012-unresolved-zones-are-retained-and-flagged.md).
 - `D-13` Materialised as a table in the `agg` layer, the layer's default, since it is a gold aggregate read repeatedly and not a view over a large fact. Source: repository (`dbt_project.yml` `marts.agg`).
 
 ## Rejected
@@ -61,4 +62,4 @@ The relation is a rollup of the trips star's own rows over the whole billable po
 
 ## History
 
-- 2026-11-25 — new-intent-ef17c719 — design record written — D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13 — terms: added Borough flow, Crossing share
+- 2026-11-25 — new-intent-ef17c719 — design record written — D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14 — terms: added Borough flow, Crossing share
