@@ -58,6 +58,7 @@
 | Destination after the contract build | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/assert_dbt_destination.py` | 0 | pass (`DESTINATION_OK`) |
 | Domain sweep | `grep -n "Cross-borough trip" CONTEXT.md`; ADR 0018, 0019 read against the design record | 0 | pass — `domain sweep: nothing new`: `Cross-borough trip` was added with the Requirement and both ADRs were written with it; no term or decision this intent introduced is missing |
 | Local git hooks | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/ci_install_state.py check-hooks --target .` | 6 | not installed (a notice, not a gate): `.git/hooks/pre-commit` and `.git/hooks/pre-push` are absent, so this push ran without the local secret scan and lint; `ci/static-check` in CI is then the only SQLFluff check |
+| Publication | `gh pr list --head intent/new-intent-28d10079 --state open --json number,url,headRefName,baseRefName`; `gh pr create --head intent/new-intent-28d10079 --base main ...`; `gh pr view 9 --json number,url,state,headRefName,baseRefName` | 0 | pass — [PR #9](https://github.com/vibedata-showcase/nyctaxi-adeiad/pull/9) `OPEN`, head `intent/new-intent-28d10079`, base `main`. The create call reported the pull request already existed from the same run; the re-query found exactly that open pull request on this head and base, so it is a reuse |
 
 ## Findings
 
