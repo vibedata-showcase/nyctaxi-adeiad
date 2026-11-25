@@ -52,3 +52,4 @@ The three population and measure questions are settled: recognised revenue, the 
 ## Approvals
 
 - 2026-11-25T06:23:02Z — requirement approved — "Please write the design records and the Plan. Stop when the Plan is written. Do not start the build yet." — 728c64a
+- 2026-11-25T06:23:37Z — design approved — "Please write the design records and the Plan. Stop when the Plan is written. Do not start the build yet." — 70f97ee
