@@ -1,0 +1,69 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: 8e49cd7c-deff-4f83-81e0-1c6458c7fa85
+name: agg_borough_flow_monthly
+version: 1.0.0
+status: active
+servers:
+  - server: sample-nyctaxi-comp
+    type: duckdb
+    database: domain.duckdb
+    schema: agg
+schema:
+  - name: agg_borough_flow_monthly
+    dataGranularityDescription: One row per calendar month, origin borough and destination borough for the pairs that carry at least 25 billable trips in that month (ADR 0018), plus one row per origin borough-month that carries no such pair, in which dest_borough is null. No primary key is declared because the destination borough of a no-pair row is legitimately null; the composite uniqueness of the grain is enforced by the singular test assert_borough_flow_one_row_per_grain.
+    properties:
+      - name: trip_month
+        description: "First day of the calendar month the trips were picked up in; the month key."
+        logicalType: date
+        physicalType: DATE
+        required: true
+      - name: origin_borough
+        description: "Borough of the pickup zone, as dim_zone names it. The unresolved zones appear as their own N/A and Unknown borough groups (ADR 0012)."
+        logicalType: string
+        physicalType: VARCHAR
+        required: true
+      - name: dest_borough
+        description: "Borough of the dropoff zone. Null only on a no-pair row, which publishes an origin borough-month that carries no pair at or above the floor."
+        logicalType: string
+        physicalType: VARCHAR
+      - name: trip_count
+        description: "Billable trips on the pair in that month; at least 25, since smaller pairs are not published (ADR 0018), and 0 on a no-pair row. Summing it undercuts the network by every pair under the floor."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: total_revenue
+        description: "Sum of total_amount over the pair's billable trips, counting no-charge and dispute payments (ADR 0013), and 0 on a no-pair row."
+        logicalType: number
+        physicalType: DOUBLE
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: origin_departing_trip_count
+        description: "Every billable trip departing the origin borough in that month, whether its pair is published or not: the denominator of the crossing share (ADR 0019)."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: origin_crossing_trip_count
+        description: "Every departing billable trip of that borough-month whose destination borough differs from the origin borough, published pair or not: the numerator of the crossing share (ADR 0019)."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: origin_crossing_trip_share
+        description: "origin_crossing_trip_count divided by origin_departing_trip_count, repeated on every row of the borough-month; null when the denominator is zero. It does not reconcile with the pair rows beside it (ADR 0019)."
+        logicalType: number
+        physicalType: DOUBLE
