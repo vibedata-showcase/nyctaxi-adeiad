@@ -62,3 +62,4 @@ None. Both branches that could change a row count or a value were answered: the 
 
 <!-- Append-only, approvals only. -->
 - 2026-11-25T05:34:13Z — requirement approved — "Approve and continue to design" — ab1ea8a
+- 2026-11-25T05:39:44Z — design approved — "Approve and continue to planning" — 792fa36
