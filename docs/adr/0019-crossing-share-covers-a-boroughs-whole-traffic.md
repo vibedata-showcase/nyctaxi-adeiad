@@ -22,3 +22,7 @@ Because the ratio is wider than the pairs, the surface publishes it on a row of 
 - A borough-month with no published pair is a row with a share and no pairs; a consumer filtering to pairs must not read its zero total as missing data.
 - The share is a ratio of counts, rebuilt through `safe_divide` so a zero denominator gives null rather than zero (ADR 0016).
 - Changing the floor (ADR 0018) does not move the share; changing the billable rule or the reporting window moves both.
+
+## Affected designs
+
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)

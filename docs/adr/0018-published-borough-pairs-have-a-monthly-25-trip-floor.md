@@ -22,3 +22,7 @@ Measured over Q1 2024, the floor keeps 56 of 122 (month, origin borough, destina
 - An origin borough-month whose every pair falls under the floor has no pair row; the surface still publishes that borough-month's crossing share, so the share is never lost to the floor.
 - Changing the threshold changes the published population at both grains, and is a decision to record rather than a constant to tune.
 - A pair that crosses the floor between two runs appears or disappears; the surface answers which borough pairs carry traffic now, not which trips happened.
+
+## Affected designs
+
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
