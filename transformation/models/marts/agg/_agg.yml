@@ -539,3 +539,46 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+  - name: agg_borough_flow_monthly
+    description: >
+      Monthly borough-to-borough flow: the billable trips of the reporting window
+      grouped by the month they started in, their origin borough and their
+      destination borough. No trip floor applies at this grain (ADR 0019), so the
+      rows close against fct_trip's billable population and a cell may hold a
+      single trip. A trip is cross-borough when its destination borough name
+      differs from its origin borough name, which counts a trip ending in an
+      unplaceable zone or outside the city as a crossing (ADR 0018); the
+      unplaceable groups and EWR are kept as their own boroughs (ADR 0012). Both
+      ends are the zone version in force on the pickup date (ADR 0009).
+    contract: {enforced: true}
+    columns:
+      - name: trip_month
+        data_type: DATE
+        data_tests: [not_null]
+      - name: origin_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+      - name: dest_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+      - name: total_revenue
+        data_type: DOUBLE
+        data_tests: [not_null]
+      - name: cross_borough_trip_count
+        data_type: BIGINT
+        description: >
+          Billable trips from the origin borough in the month whose destination
+          borough is a different name. A property of the origin borough and month:
+          it repeats on every row of that origin and month, so summing it across
+          destinations double-counts.
+        data_tests: [not_null]
+      - name: cross_borough_share
+        data_type: DOUBLE
+        description: >
+          The cross-borough trips divided by all of the origin borough's trips in
+          the month, as a ratio between 0 and 1; null when the denominator is
+          zero. Repeats across the origin borough's rows, so do not sum it.
+      - name: billable_trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: Trips whose total amount is positive.

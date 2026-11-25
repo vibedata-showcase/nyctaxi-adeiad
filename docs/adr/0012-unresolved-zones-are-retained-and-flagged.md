@@ -22,3 +22,4 @@ The TLC zone lookup includes zones whose borough is unknown or not applicable. T
 
 - [`models/core/dim_zone.md`](../design/models/core/dim_zone.md)
 - [`models/intermediate/int_trip_quality_flags.md`](../design/models/intermediate/int_trip_quality_flags.md)
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
