@@ -35,9 +35,9 @@
 
 **Requirements:** `R-06` · **Design:** `docs/design/models/agg/agg_borough_flow_monthly.md` · **Skill:** `data-contract` · **Depends on:** none
 
-- [ ] Author `contracts/agg/agg_borough_flow_monthly.odcs.yaml` for `agg.agg_borough_flow_monthly` with `status: proposed`, one property per published column and the grain stated: `trip_month` (DATE), `origin_borough` (VARCHAR), `destination_borough` (VARCHAR) as `primaryKey`, `is_cross_borough` (BOOLEAN), `trip_count` (BIGINT, required, non-negative), `total_revenue` (DOUBLE, required), `origin_trip_count` (BIGINT, required, greater than zero), `cross_borough_trip_count` (BIGINT, required), `outbound_cross_borough_share` (DOUBLE, required, between 0 and 1). Describe the population (billable trips with both zones in an NYC borough), that every cell is published (ADR 0018), and that the share's denominator is `origin_trip_count`. Server: `sample-nyctaxi-comp`, `type: duckdb`, `database: domain.duckdb`, `schema: agg`, matching the sibling contracts.
-- [ ] Run `python3 .agents/skills/data-contract/scripts/odcs.py check`; expect exit 0 (`contract/active-unbuilt` is not raised for a `proposed` contract).
-- [ ] Commit `contracts/agg/agg_borough_flow_monthly.odcs.yaml`.
+- [x] Author `contracts/agg/agg_borough_flow_monthly.odcs.yaml` for `agg.agg_borough_flow_monthly` with `status: proposed`, one property per published column and the grain stated: `trip_month` (DATE), `origin_borough` (VARCHAR), `destination_borough` (VARCHAR) as `primaryKey`, `is_cross_borough` (BOOLEAN), `trip_count` (BIGINT, required, non-negative), `total_revenue` (DOUBLE, required), `origin_trip_count` (BIGINT, required, greater than zero), `cross_borough_trip_count` (BIGINT, required), `outbound_cross_borough_share` (DOUBLE, required, between 0 and 1). Describe the population (billable trips with both zones in an NYC borough), that every cell is published (ADR 0018), and that the share's denominator is `origin_trip_count`. Server: `sample-nyctaxi-comp`, `type: duckdb`, `database: domain.duckdb`, `schema: agg`, matching the sibling contracts.
+- [x] Run `python3 .agents/skills/data-contract/scripts/odcs.py check`; expect exit 0 (`contract/active-unbuilt` is not raised for a `proposed` contract).
+- [x] Commit `contracts/agg/agg_borough_flow_monthly.odcs.yaml`.
 
 ### Task 2: the model, its properties and its tests
 
@@ -65,3 +65,5 @@
 - [ ] Commit `repo-map.json` and `test-map.json`.
 
 ## Execution evidence
+
+- Task 1: `python3 .agents/skills/data-contract/scripts/odcs.py check` — exit 0 — `contracts/agg/agg_borough_flow_monthly.odcs.yaml` (9 properties, `status: proposed`) — sha256:57204d8c76db139ae52b3ab612dcdda5432c947e477fc9f7cb241da29e88888b

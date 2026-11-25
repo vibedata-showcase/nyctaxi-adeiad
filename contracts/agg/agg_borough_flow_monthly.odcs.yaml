@@ -1,0 +1,110 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: 3008f11f-c3c2-4fd8-9cba-1b629522af41
+name: agg_borough_flow_monthly
+version: 1.0.0
+status: proposed
+servers:
+  - server: sample-nyctaxi-comp
+    type: duckdb
+    database: domain.duckdb
+    schema: agg
+schema:
+  - name: agg_borough_flow_monthly
+    dataGranularityDescription: >-
+      Borough-to-borough movement for one pickup month over the five NYC boroughs. Every origin and
+      destination cell is published, including the cells with no trips, so the grid is complete and no
+      pair is suppressed for being thin (ADR 0018). The population is billable trips whose pickup zone
+      and dropoff zone are both in an NYC borough (ADR 0003), so trips touching an unresolved zone or a
+      place outside the city are outside the grid and outside every share and total it carries (ADR 0012).
+    properties:
+      - name: trip_month
+        description: "First day of the pickup month the row reports; the month's key, and the level a consumer joins to the calendar."
+        logicalType: date
+        physicalType: DATE
+        required: true
+        primaryKey: true
+      - name: origin_borough
+        description: "Borough of the pickup zone, one of the five NYC boroughs."
+        logicalType: string
+        physicalType: VARCHAR
+        required: true
+        primaryKey: true
+        quality:
+          - type: library
+            metric: invalidValues
+            mustBe: 0
+            arguments:
+              validValues:
+                - Manhattan
+                - Bronx
+                - Brooklyn
+                - Queens
+                - Staten Island
+      - name: destination_borough
+        description: "Borough of the dropoff zone, one of the five NYC boroughs."
+        logicalType: string
+        physicalType: VARCHAR
+        required: true
+        primaryKey: true
+        quality:
+          - type: library
+            metric: invalidValues
+            mustBe: 0
+            arguments:
+              validValues:
+                - Manhattan
+                - Bronx
+                - Brooklyn
+                - Queens
+                - Staten Island
+      - name: is_cross_borough
+        description: "True when the trip leaves the borough it started in, so origin and destination differ."
+        logicalType: boolean
+        physicalType: BOOLEAN
+        required: true
+      - name: trip_count
+        description: "Billable trips from the origin borough to the destination borough in the month; zero for a cell with no such trip."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: total_revenue
+        description: "Sum of total_amount over the cell's billable trips, in USD; zero for a cell with no such trip."
+        logicalType: number
+        physicalType: DOUBLE
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: origin_trip_count
+        description: "Billable trips that started in the origin borough in the month, over every destination: the denominator of the share, published so a reader can judge how many trips a share rests on."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: cross_borough_trip_count
+        description: "Billable trips that started in the origin borough in the month and ended in another borough: the numerator of the share."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+      - name: outbound_cross_borough_share
+        description: "Share of the origin borough's trips in the month that left it, as a fraction between 0 and 1: cross_borough_trip_count over origin_trip_count. Repeated on every destination row of that origin month, so it is not additive across rows."
+        logicalType: number
+        physicalType: DOUBLE
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
