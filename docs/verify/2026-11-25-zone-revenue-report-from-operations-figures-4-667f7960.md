@@ -1,28 +1,54 @@
 # Verification: Zone revenue report from operations figures 4
 
+## Verification
+
+`verdict: verified` at `9dd8de3`: the daily zone revenue report is built from the operations figures in `agg_trip_zone_daily` and every number in it is unchanged — Finance's own check reads 95,958 trips and 2,629,185.82 revenue for Q1 2024 and 4,120 trips and 337,711.05 for JFK Airport, and the rebuilt report hashes identically to the pre-change report over all eleven columns across all 7,961 rows.
+
 ## Coverage
 
 | Item | Evidence | Result | At |
 | --- | --- | --- | --- |
-| `R-01` billable measures beside the all-trip ones | | | |
-| `R-02` report built from the aggregate only | | | |
-| `R-03` no number changes | | | |
-| `R-04` report keeps its shape | | | |
-| `R-05` no other consumer sees a changed number | | | |
-| `R-06` contracts and documentation carry the change | | | |
-| `agg_trip_zone_daily` | | | |
-| `mart_daily_zone_revenue` | | | |
+| `R-01` billable measures beside the all-trip ones | full outer join of the six columns against a recomputation from `fct_trip` filtered `is_billable` in the window, money at the cent: `with from_fact as (...) select count(*), count(*) filter (where ... is distinct from ...) from agg.agg_trip_zone_daily a join from_fact b on b.loc=a.pickup_location_id and b.pickup_date=a.pickup_date` | 7,997 cells compared, **0 differing** on any of the six | `9dd8de3` |
+| `R-01` all-trip figures unchanged | `select sum(trip_count), round(sum(total_revenue),2), sum(billable_trip_count), round(sum(billable_total_revenue),2) from agg.agg_trip_zone_daily` | all-trip **97,184 · 2,597,120.92** (unchanged); billable 95,958 · 2,629,185.82 | `9dd8de3` |
+| `R-02` report built from the aggregate only | manifest `depends_on` for `mart_daily_zone_revenue`, plus grepping the compiled SQL | `['agg_trip_zone_daily', 'dim_zone']`; compiled SQL contains `agg_trip_zone_daily` and **0** occurrences of `fct_trip` or `pickup_datetime` | `9dd8de3` |
+| `R-03` no number changes — Q1 and JFK | `select sum(trip_count), round(sum(total_revenue),2) from finance.mart_daily_zone_revenue`, and the same `where pickup_location_id=132` | **95,958 · 2,629,185.82**; JFK **4,120 · 337,711.05** — Finance's figures exactly | `9dd8de3` |
+| `R-03` no number changes — every cell | XOR-folded `hash()` of all eleven columns at the cent, run on `domain` (pre-change) and `ephemeral` (rebuilt); independent recomputation stands in for a golden baseline, which the Domain does not configure | both sides `7961` rows, XOR `1519272891939109225`; fare 1,802,576.08 and total 2,629,185.82 on both. Identical multiset hash = bit-for-bit equivalence, not a sample | `9dd8de3` |
+| `R-03` reconciliation test | `assert_daily_zone_revenue_matches_billable_trips`, population stated independently in the test | PASS, 0 rows | `9dd8de3` |
+| `R-04` report keeps its shape | `select count(*), count(distinct pickup_location_id), count(distinct trip_date), count(distinct zone_name), count(distinct borough), distinct reporting_region values, count(*) where trip_count=0 from finance.mart_daily_zone_revenue` | 7,961 rows · 261 zones · 91 dates · 260 zone names · 8 boroughs · regions exactly `Manhattan Core, Out of State, Outer Boroughs, Unresolved` · **0** zero-trip rows. Same values as the design stop | `9dd8de3` |
+| `R-04` published column shape | `information_schema.columns` on `ephemeral` and on `domain` | the same 11 columns, same ordinal positions, same types on both | `9dd8de3` |
+| `R-05` no other consumer sees a changed number | XOR-folded `hash()` of the aggregate's 14 pre-existing columns at the cent, on `domain` and `ephemeral` | both sides `7997` rows, XOR `13949863427255895899` — every pre-existing column unchanged in every row | `9dd8de3` |
+| `R-05` column set | `information_schema.columns` on `agg.agg_trip_zone_daily` | 20 columns: the 14 existing at positions 1–14 with their types, the 6 new at 15–20 | `9dd8de3` |
+| `R-06` contracts and documentation | `odcs.py check`, `check --relations`, `profile` on both relations, the semantic chain, `validating-semantic-model` and `validating-data-contract` reports | aggregate contract `1.0.1 → 1.1.0` for six added properties, all gates exit 0, 0 errors; report contract unchanged (`1.0.1`, star member, every rule still true) | `9dd8de3` |
+| `agg_trip_zone_daily` scope row | `dbt build --exclude test_type:unit` over the project, then `describe_asset` and the schema query | exit 0, PASS=235 WARN=1 ERROR=0; relation `agg.agg_trip_zone_daily`, `table` | `9dd8de3` |
+| `mart_daily_zone_revenue` scope row | the same build, its own reconciliation test and its declared tests | exit 0; `assert_daily_zone_revenue_matches_billable_trips` PASS; `not_null` on `trip_date` and `total_revenue` PASS; `relationships` to `dim_zone` PASS with 0 orphans | `9dd8de3` |
+| `contracts/agg/agg_trip_zone_daily.odcs.yaml` | `odcs.py check`, `diff origin/main`, `check --relations`, `profile --relation` | exit 0 each; diff reports six `diff/additive` and no version fault; profile 0 errors 0 warnings | `9dd8de3` |
+| `contracts/finance/mart_daily_zone_revenue.odcs.yaml` | `odcs.py check`, `diff origin/main`, `check --relations`, `profile --relation` | exit 0 each; diff reports nothing for it; profile 0 errors, 1 `profile/unchecked` (relationship not testable — proven separately by query: 0 orphans) | `9dd8de3` |
+| `LTS2_zone_day_agg`, `LTS7_daily_zone_revenue` | `ossie.py validate`, `coverage`, `suppliers`, `notes`, `generate-tests --check`, `bindings`, `columns` | exit 0 through the chain; `bindings` 0 errors with 2 `bindings/unproven` on `LTS7` (the report selects pre-computed measures, so no aggregation is visible statically); the content test holds both bindings on data | `9dd8de3` |
 
 ## Gate results
 
 | Gate | Command | Exit | Outcome |
 | --- | --- | --- | --- |
-| Build and data tests, `agg_trip_zone_daily` and its parents | - | - | unrun until execution |
-| Build and data tests, `mart_daily_zone_revenue` | - | - | unrun until execution |
-| Unit tests | - | - | unrun until execution |
-| Semantic model gates | - | - | unrun until execution |
-| Contract check | - | - | unrun until execution |
-| Project audit | - | - | unrun until execution |
+| Build and data tests, whole project | `cd transformation && dbt build --exclude test_type:unit` | 0 | pass (PASS=235 WARN=1 ERROR=0 SKIP=0; the 1 WARN is the pre-existing `unresolved` borough finding) |
+| Unit tests | `cd transformation && dbt test --select test_type:unit` | 0 | pass (PASS=6) |
+| Sandbox destination | `python .../scripts/assert_dbt_destination.py` | 0 | pass (`DESTINATION_OK: 67 built relation(s) landed in the sandbox`) |
+| Domain data-test command | `cd transformation && dbt test --exclude test_type:unit` | 0 | pass (PASS=168 WARN=1) — run as the layer/selection gate, not rerun verbatim from `repo-map.json` |
+| Semantic structural chain | `ossie.py validate` → `coverage` → `suppliers` → `notes` → `generate-tests --check` | 0 | pass (0 errors; `coverage` 31 named, 0 errors; `suppliers` 0; `notes` 0; `generate-tests` 3 files 0 stale) |
+| Semantic SQL checks | `ossie.py bindings`, `ossie.py columns` | 0 | pass (bindings 0 errors; columns 0 errors, 5 pre-existing same-class type warnings on unrelated fields) |
+| Ontology: validate | `ossie.py validate ontology/` | 0 | pass (3 files, 0 errors, 0 warnings) |
+| Ontology: refs | `ossie.py refs ontology/ logical-model/` | 0 | pass (0 errors; 2 warnings on `Shift`/`Medallion`, reproduced identically at the merge-base `1184020` in a temporary worktree, so pre-existing) |
+| Ontology: glossary | `ossie.py glossary ontology/ CONTEXT.md` | 0 | pass (0 entity types without a term; 24 terms and 15 value types reported for review, as before) |
+| Contract check | `python3 .agents/skills/data-contract/scripts/odcs.py check` | 0 | pass (0 errors) |
+| Contract diff | `... odcs.py diff origin/main` | 0 | pass (6 `diff/additive`, no `diff/version-not-bumped`) |
+| Contract relations | `... odcs.py check --relations --catalog <sandbox>` | 0 | pass (0 errors) |
+| Contract profile, aggregate | `... odcs.py profile --relation agg.agg_trip_zone_daily --catalog <sandbox>` | 0 | pass (0 errors, 0 warnings) |
+| Contract profile, report | `... odcs.py profile --relation finance.mart_daily_zone_revenue --catalog <sandbox>` | 0 | pass (0 errors; 1 `profile/unchecked` reported as unproven, not passing) |
+| Project audit | `cd transformation && dbt build --select package:dbt_project_evaluator --vars '{dbt_project_evaluator_enabled: true}' --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass (PASS=66 WARN=12 ERROR=0; the `fct_missing_primary_key_tests` warning names 20 models, both relations here already among them and unchanged by this intent) |
+| Python tests | `python3 -m pytest tests -q` | 0 | pass (222 passed) |
+| Python lint | `ruff check .` | 0 | pass (all checks passed) |
+| SQL lint | `sqlfluff lint transformation/models` | 0 | pass (clean) |
+| ADR numbering and citations | `python3 .github/scripts/adr_lint.py` | 0 | pass |
+| ADR two-way links | `python3 -m pytest tests/test_adr_links.py -q` | 0 | pass |
 
 ## Discovery
 
@@ -49,3 +75,15 @@
 - A filtered sum returns NULL where the count returns zero: on the 36 zone-days with no billable trip the count is 0 and each of the five money columns is NULL — `with billable as (... count(*) filter (where f.is_billable) as billable_trip_count, sum(f.fare_amount) filter (where f.is_billable) as billable_fare_revenue, sum(f.total_amount) filter (where f.is_billable) as billable_total_revenue ... group by 1,2) select count(*) as zone_days, count(*) filter (where billable_trip_count = 0) as zero_count_rows, count(*) filter (where billable_trip_count is null) as null_count_rows, count(*) filter (where billable_fare_revenue is null) as null_fare_rows, count(*) filter (where billable_total_revenue is null) as null_total_rows from billable` → 7,997 zone-days, 36 with a zero count, 0 with a null count, 36 with a null fare and 36 with a null total.
 
 - Aggregating those NULLs changes no total: the billable sum over the whole window equals the report's, because a sum ignores NULL — the billable profile above returns 95,958 trips / 2,629,185.82 total, matching the report's published figures.
+
+## Findings and limits
+
+- **Nothing was weakened.** Two tests were added (one per relation) and one `not_null` test was added on `billable_trip_count`; no existing test, rule, column or filter was removed or loosened. `list_changes` reports every Guarantee Change as `stronger` and none requiring acknowledgement. The three `dbt_project_evaluator` warnings that persist (`fct_missing_primary_key_tests`, `valid_test_coverage`, and the semantic-levels warning) are all pre-existing: the first lists 20 models including both relations here with their test counts unchanged, and the other two were reproduced at the merge-base.
+
+- **Scope held.** `git diff 1184020 --stat` over `transformation/models/marts/core/`, `agg_od_flow_matrix`, `agg_trip_band_profile`, `agg_trip_zone_daypart_dow`, `agg_weather_demand_daily`, `agg_zone_occupancy_hourly`, `mart_monthly_service_summary`, `mart_revenue_component_bridge` and `marts/ops/` is empty — none was touched. `list_changes` attributes those twelve as modified only because they are the nodes the two new singular tests are attached to and are downstream of `dim_zone`/`fct_trip`, not because their files or SQL changed. No published model outside the two in scope was modified, and `fct_trip`, `dim_zone` and everything upstream are byte-identical.
+
+- **`bindings/unproven` on `LTS7`, reported as unproven not as passing.** The static tracer cannot see a `count` or `sum` in the report any more, because the report selects the aggregate's pre-computed measures rather than aggregating the fact. This is the intended consequence of one source, not a defect: the data-side content test holds both bindings, and the report's reconciliation test proves the values against an independently stated population.
+
+- **One check the engine could not run.** `profile` on the report reports `profile/unchecked` for `pickup_location_id → dim_zone.zone_natural_key`, because the contract declares no `dim_zone` schema. It is recorded as unproven, never as passing, and the relationship is proven separately by query (0 orphan keys).
+
+- **Limit: no golden baseline.** The Domain configures none, so the "no number changes" claim rests on independent recomputation — the XOR row-set hash computed on both the Domain and the sandbox — rather than on a registered snapshot. The hash covers every column of every row at the cent; it would not detect a difference below one cent.
