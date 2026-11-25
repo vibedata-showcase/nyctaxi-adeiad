@@ -64,3 +64,4 @@ None: both material branches were answered before drafting.
 
 ## Approvals
 
+- 2026-11-25T06:35:56Z — requirement approved — "approve_design" — 2ce6ecd
