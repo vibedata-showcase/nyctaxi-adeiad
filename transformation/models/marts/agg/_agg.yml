@@ -161,6 +161,49 @@ models:
       - name: avg_corridor_mph
         data_type: DOUBLE
         description: Mean trip distance divided by mean trip hours for the pair, in miles per hour; null when the divisor is zero.
+  - name: agg_borough_flow_monthly
+    description: >
+      Monthly borough-to-borough flow: one row per month, origin borough and
+      destination borough that carries at least one billable trip. Built from
+      the trip fact with the zone dimension joined twice, once per role, then
+      rolled up from the zone to the borough. Every borough the zone master
+      names is kept, the unresolved groups and EWR included (ADR 0012), and no
+      trip floor is applied (ADR 0018). cross_borough_share is the origin
+      borough's cross-borough trips over all its trips that month, so it
+      repeats on each of that borough's rows.
+    access: protected
+    contract: {enforced: true}
+    columns:
+      - name: trip_month
+        data_type: DATE
+        data_tests: [not_null]
+        description: Calendar month of the trip's pickup, as its first date.
+      - name: origin_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough of the pickup zone, as dim_zone carries it; 'Unknown' and 'N/A' are unresolved zones.
+      - name: dest_borough
+        data_type: VARCHAR
+        data_tests: [not_null]
+        description: Borough of the dropoff zone, as dim_zone carries it; 'Unknown' and 'N/A' are unresolved zones.
+      - name: trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: '{{ doc("borough_flow_trip_count") }}'
+      - name: total_revenue
+        data_type: DOUBLE
+        data_tests: [not_null]
+        description: Sum of total_amount over those trips.
+      - name: cross_borough_trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: Those trips ending in a borough other than the one they started in; zero on a same-borough row.
+      - name: cross_borough_share
+        data_type: DOUBLE
+        description: >
+          The origin borough's cross-borough trips over all its trips that
+          month, so it repeats on each of that borough's rows. Null only when
+          the borough has no trips, which cannot happen on a published row.
   - name: agg_trip_band_profile
     description: >
       Distance, duration and fare banding in one profile. Three independent range

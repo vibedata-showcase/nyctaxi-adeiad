@@ -85,7 +85,10 @@
         "transformation/tests/assert_daypart_cube_one_row_per_grain.sql",
         "transformation/tests/assert_compound_rates_equal_their_ratio.sql",
         "transformation/tests/assert_aggs_cover_every_trip.sql",
-        "transformation/tests/assert_od_flow_floor.sql"
+        "transformation/tests/assert_od_flow_floor.sql",
+        "transformation/tests/assert_borough_flow_one_row_per_grain.sql",
+        "transformation/tests/assert_borough_flow_covers_every_billable_trip.sql",
+        "transformation/tests/assert_borough_flow_share_is_a_ratio_of_sums.sql"
       ],
       "selectors": {
         "data": "path:models/marts/agg"

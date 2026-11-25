@@ -1,0 +1,105 @@
+version: 2
+
+unit_tests:
+  # --- agg_borough_flow_monthly: billable filter, borough pairs, share ratio ---
+  - name: borough_flow_same_borough_trip_adds_no_crossing
+    description: A trip that starts and ends in Manhattan counts in trip_count but adds nothing to cross_borough_trip_count, so the borough's share is zero.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T1, pickup_datetime: '2024-01-10 08:00:00', total_amount: 10.0, is_billable: true, pickup_zone_key: Z-MAN, dropoff_zone_key: Z-MAN2}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-MAN, borough_name: Manhattan}
+          - {zone_key: Z-MAN2, borough_name: Manhattan}
+    expect:
+      rows:
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, trip_count: 1, total_revenue: 10.0, cross_borough_trip_count: 0, cross_borough_share: 0.0}
+
+  - name: borough_flow_share_repeats_on_each_row_of_a_borough_month
+    description: Two Manhattan trips, one ending in Brooklyn, make the share one half on both of Manhattan's rows that month; the share is a ratio of the borough's sums, not a per-pair flag.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T1, pickup_datetime: '2024-01-10 08:00:00', total_amount: 10.0, is_billable: true, pickup_zone_key: Z-MAN, dropoff_zone_key: Z-BKN}
+          - {trip_key: T2, pickup_datetime: '2024-01-11 09:00:00', total_amount: 30.0, is_billable: true, pickup_zone_key: Z-MAN2, dropoff_zone_key: Z-MAN}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-MAN, borough_name: Manhattan}
+          - {zone_key: Z-MAN2, borough_name: Manhattan}
+          - {zone_key: Z-BKN, borough_name: Brooklyn}
+    expect:
+      rows:
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Brooklyn, trip_count: 1, total_revenue: 10.0, cross_borough_trip_count: 1, cross_borough_share: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, trip_count: 1, total_revenue: 30.0, cross_borough_trip_count: 0, cross_borough_share: 0.5}
+
+  - name: borough_flow_splits_a_pair_by_month
+    description: The same borough pair in two months is two rows, each sharing only its own month's trips.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T1, pickup_datetime: '2024-01-10 08:00:00', total_amount: 10.0, is_billable: true, pickup_zone_key: Z-MAN, dropoff_zone_key: Z-BKN}
+          - {trip_key: T2, pickup_datetime: '2024-02-10 08:00:00', total_amount: 20.0, is_billable: true, pickup_zone_key: Z-MAN, dropoff_zone_key: Z-BKN}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-MAN, borough_name: Manhattan}
+          - {zone_key: Z-BKN, borough_name: Brooklyn}
+    expect:
+      rows:
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Brooklyn, trip_count: 1, total_revenue: 10.0, cross_borough_trip_count: 1, cross_borough_share: 1.0}
+        - {trip_month: '2024-02-01', origin_borough: Manhattan, dest_borough: Brooklyn, trip_count: 1, total_revenue: 20.0, cross_borough_trip_count: 1, cross_borough_share: 1.0}
+
+  - name: borough_flow_keeps_an_unresolved_borough
+    description: A trip whose pickup zone carries the unresolved borough 'Unknown' is published as its own origin borough, not dropped and not relabelled.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T1, pickup_datetime: '2024-03-05 18:00:00', total_amount: 25.0, is_billable: true, pickup_zone_key: Z-UNK, dropoff_zone_key: Z-QNS}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-UNK, borough_name: Unknown}
+          - {zone_key: Z-QNS, borough_name: Queens}
+    expect:
+      rows:
+        - {trip_month: '2024-03-01', origin_borough: Unknown, dest_borough: Queens, trip_count: 1, total_revenue: 25.0, cross_borough_trip_count: 1, cross_borough_share: 1.0}
+
+  - name: borough_flow_drops_non_billable_and_out_of_window_trips
+    description: A non-billable trip and a trip picked up on 2024-04-01 stay out, so only the billable in-window trip is counted.
+    model: agg_borough_flow_monthly
+    overrides:
+      vars:
+        report_start: '2024-01-01'
+        report_end: '2024-04-01'
+    given:
+      - input: ref('fct_trip')
+        rows:
+          - {trip_key: T1, pickup_datetime: '2024-01-10 08:00:00', total_amount: 10.0, is_billable: true, pickup_zone_key: Z-BRX, dropoff_zone_key: Z-BRX}
+          - {trip_key: T2, pickup_datetime: '2024-01-11 08:00:00', total_amount: -15.0, is_billable: false, pickup_zone_key: Z-BRX, dropoff_zone_key: Z-MAN}
+          - {trip_key: T3, pickup_datetime: '2024-04-01 00:30:00', total_amount: 40.0, is_billable: true, pickup_zone_key: Z-BRX, dropoff_zone_key: Z-MAN}
+      - input: ref('dim_zone')
+        rows:
+          - {zone_key: Z-BRX, borough_name: Bronx}
+          - {zone_key: Z-MAN, borough_name: Manhattan}
+    expect:
+      rows:
+        - {trip_month: '2024-01-01', origin_borough: Bronx, dest_borough: Bronx, trip_count: 1, total_revenue: 10.0, cross_borough_trip_count: 0, cross_borough_share: 0.0}
