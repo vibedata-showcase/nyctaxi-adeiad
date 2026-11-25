@@ -22,9 +22,9 @@
 | `agg_borough_flow_monthly` | model | create | `R-01`, `R-02`, `R-03`, `R-04`, `R-05`, `R-06` | `docs/design/models/agg/agg_borough_flow_monthly.md` | `dbt build --select agg_borough_flow_monthly --target dev` then `dbt test --select agg_borough_flow_monthly --target dev` |
 | `contracts/agg/agg_borough_flow_monthly.odcs.yaml` | contract | create | `R-06` | `docs/design/models/agg/agg_borough_flow_monthly.md` | `python3 .agents/skills/data-contract/scripts/odcs.py check` |
 | `logical-model/nyc_taxi_analytics.ossie.yaml` | logical-model | modify | `R-06` | `docs/design/models/agg/agg_borough_flow_monthly.md` | `ossie.py validate`, `coverage`, `suppliers`, `notes`, `generate-tests --check` |
-| `ontology/nyc_taxi_analytics.mapping.yaml` | ontology | modify | `R-06` | `docs/design/models/agg/agg_borough_flow_monthly.md` | `ossie.py validate ontology/`, `refs`, `glossary` |
+| `ontology/nyc_taxi_analytics.mapping.yaml` | ontology | no change (check only) | `R-06` | `docs/design/models/agg/agg_borough_flow_monthly.md` | `ossie.py validate ontology/`, `refs`, `glossary` |
 
-**Change impact:** No existing artifact changes. `agg_borough_flow_monthly` is new, so it has no downstream consumer and no upstream model is edited. `agg.agg_od_flow_matrix`, `finance.mart_daily_zone_revenue` and every other published model are untouched — `fct_trip` and `dim_zone` are read, not modified, and their contracts are unchanged. The Ossie document gains one aggregate logical source and two metrics on the existing trips star; no existing dataset, metric or relationship changes.
+**Change impact:** No existing artifact changes. `agg_borough_flow_monthly` is new, so it has no downstream consumer and no upstream model is edited. `agg.agg_od_flow_matrix`, `finance.mart_daily_zone_revenue` and every other published model are untouched — `fct_trip` and `dim_zone` are read, not modified, and their contracts are unchanged. The Ossie document gains one aggregate logical source on the existing trips star; no existing dataset, metric or relationship changes, and no metric is added (the two cross-borough measures are refused per `D-13`). The ontology is unchanged.
 
 **Baseline build_sha:** not applicable — the dbt card's `## Defer` says no production manifest is published, so `/data/cache` was not read.
 
@@ -47,12 +47,12 @@
 - [x] Run the acceptance conditions: `R-01` via the grain test (0 rows); `R-02`/`R-03` via the coverage test (0 rows) and a read of the three months against 29,985 / 30,017 / 35,956 and 816,057.76 / 813,885.68 / 999,242.38; `R-04` via the ratio-of-sums test (0 rows) and one recomputed origin-month by hand; `R-05` via an 8-group check.
 - [x] Commit and push `agg_borough_flow_monthly.sql`, `_agg.yml`, `_unit_tests.yml`, the three singular tests and the contract.
 
-### Task 2: The Ossie logical source, its two metrics, and the ontology references
+### Task 2: The Ossie logical source, and the ontology checks
 
 **Requirements:** `R-06` · **Design:** `docs/design/models/agg/agg_borough_flow_monthly.md` (`## Logical Model`) · **Skill:** `semantic-model` with `ontology` · **Depends on:** Task 1
 
 - [x] Add `LTS10_borough_flow_monthly` to the `trips` dataset's `logical_sources` in `logical-model/nyc_taxi_analytics.ossie.yaml`: `physical_table: agg_borough_flow_monthly`, `column_map` binding `trip_count` → `billable_trip_count` and `total_revenue` → `billable_revenue`, `content_grain` at the model's grain, `content_levels` reaching the `month` level of `date` and the `borough` level of `zone` through both roles, `content_filter` naming the window, `is_billable` and both zone keys. Its `note` refuses `cross_borough_trip_share` with the reason in `D-11`.
-- [x] Declare metric `cross_borough_trip_count` (a `SUM` over the source's `trip_count`, filtered to rows where origin and destination borough differ) and `cross_borough_trip_share` (a `derived_expression` over that numerator and `billable_trip_count`).
+- [x] Declare metric `cross_borough_trip_count` (a `SUM` over the source's `trip_count`, filtered to rows where origin and destination borough differ) and `cross_borough_trip_share` (a `derived_expression` over that numerator and `billable_trip_count`). **Not done as written:** the fact carries zone keys, not boroughs, so neither metric compiles against `LTS1_detail`; both are refused instead, recorded in the source `note` and as design decision `D-13`, and the measures ship as physical columns.
 - [x] Run `python3 .agents/skills/semantic-model/scripts/ossie.py generate-tests logical-model/ transformation/tests` to regenerate the semantic tests, and commit what it writes.
 - [x] Run the structural chain: `ossie.py validate logical-model/`, `coverage` with the four boundary roots and the three `--exclude`s from `test-map.json`, `suppliers`, `notes`, `generate-tests --check`; expect exit 0 each.
 - [x] Run the `validating-semantic-model` review; expect a pass.

@@ -33,6 +33,7 @@ borough alone (loses the destination the question asks for).
 - `D-10` The relation is a boundary model, so it pays all three boundary artifacts: a `public` dbt model with an enforced contract, an ODCS contract at `contracts/agg/agg_borough_flow_monthly.odcs.yaml`, and an aggregate logical source in `logical-model/nyc_taxi_analytics.ossie.yaml`. Source: `R-06`; `repo-map.json` `layers`.
 - `D-11` The share column is not mapped to a logical-source column. It is a ratio of two aggregates over the origin borough's rows, so the semantic model expresses it as a ratio metric over a filtered numerator rather than binding it to the physical column, and the source's `note` records the refusal. Source: `D-07`; `.agents/skills/semantic-model/SKILL.md` (a rate is a `derived_expression` over its numerator and denominator metrics, bound to no column).
 - `D-12` The model's trip count column is `billable_trip_count`, not `trip_count`, because the Ossie `trip_count` field reads "Trips, billable or not" and `odcs.py generate` writes that description onto any column of that name, which would misdescribe a count of billable trips only. Supersedes the column name implied by `D-02`.
+- `D-13` The share and the cross-borough count are **not** semantic metrics at all, superseding `D-11`'s claim that the semantic model expresses the share as a ratio metric. `fct_trip` carries `pickup_zone_key` and `dropoff_zone_key`, not boroughs, so no detail row states whether two zones share a borough and no metric compiles against `LTS1_detail`; `generate-tests` fails with `maps no column for 'dropoff_borough'`. Both stay physical columns of the table, described in its dbt model and its contract and held by their own tests, and the logical source's `note` records the refusal and what would make a metric expressible — a fact that carries borough identity. Source: `R-06`; the `ossie.py generate-tests` failure at `e485f2f`.
 
 ## Rejected
 
@@ -92,3 +93,4 @@ ontology:
 
 - 2026-11-25 — Borough-to-borough trips and revenue, Q1 2024 3 — created with the model's design — D-01…D-11 — terms: added cross-borough trip
 - 2026-11-25 — Borough-to-borough trips and revenue, Q1 2024 3 — execution: renamed the count column, refused the two metrics the fact cannot support — D-12 — terms: none new
+- 2026-11-25 — Borough-to-borough trips and revenue, Q1 2024 3 — shipping: `access: public` set beside the enforced contract, and the refusal at `D-13` recorded in place of `D-11`'s plan — D-13 — terms: none new
