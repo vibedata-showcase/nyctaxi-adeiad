@@ -110,6 +110,25 @@ models:
         data_type: DOUBLE
       - name: revenue_rank_that_day
         data_type: BIGINT
+      - name: billable_trip_count
+        data_type: BIGINT
+        data_tests: [not_null]
+        description: Billable trips on the zone-day, the count of rows the billable measures below are computed over. Zero where the zone-day's trips are all non-billable; `trip_count` above is every trip either way.
+      - name: billable_fare_revenue
+        data_type: DOUBLE
+        description: Sum of fare_amount over the zone-day's billable trips; null when it has none.
+      - name: billable_tip_revenue
+        data_type: DOUBLE
+        description: Sum of tip_amount over the zone-day's billable trips; null when it has none.
+      - name: billable_surcharge_revenue
+        data_type: DOUBLE
+        description: Sum of total_surcharges over the zone-day's billable trips; null when it has none.
+      - name: billable_toll_revenue
+        data_type: DOUBLE
+        description: Sum of tolls_amount over the zone-day's billable trips; null when it has none.
+      - name: billable_total_revenue
+        data_type: DOUBLE
+        description: Sum of total_amount over the zone-day's billable trips, the figure a revenue report publishes; null when it has none. Not comparable with `total_revenue` above, which sums every trip.
   - name: agg_od_flow_matrix
     description: >
       Origin-to-destination flow -- the same zone dimension joined twice, in both
