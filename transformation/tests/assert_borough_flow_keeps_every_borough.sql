@@ -47,6 +47,6 @@ union all
 select
     'cell' as role,
     origin_borough || ' -> ' || dest_borough as borough,
-    trip_count as trips
+    billable_trip_count as trips
 from {{ ref('agg_borough_flow_monthly') }}
-where trip_count < 1
+where billable_trip_count < 1

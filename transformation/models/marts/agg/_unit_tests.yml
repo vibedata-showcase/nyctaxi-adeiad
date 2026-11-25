@@ -20,8 +20,8 @@ unit_tests:
           - {zone_key: 'z-bkn', borough_name: Brooklyn}
     expect:
       rows:
-        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Brooklyn, trip_count: 1, total_revenue: 20.00, cross_borough_trip_count: 1, cross_borough_share: 0.5}
-        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, trip_count: 1, total_revenue: 10.00, cross_borough_trip_count: 1, cross_borough_share: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Brooklyn, billable_trip_count: 1, total_revenue: 20.00, cross_borough_trip_count: 1, cross_borough_share: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, billable_trip_count: 1, total_revenue: 10.00, cross_borough_trip_count: 1, cross_borough_share: 0.5}
 
   # --- the share's denominator is the origin's whole month, not the cell -----
   - name: borough_flow_share_uses_the_origin_borough_total
@@ -43,9 +43,9 @@ unit_tests:
           - {zone_key: 'z-man', borough_name: Manhattan}
     expect:
       rows:
-        - {trip_month: '2024-01-01', origin_borough: Queens, dest_borough: Manhattan, trip_count: 1, total_revenue: 30.00, cross_borough_trip_count: 1, cross_borough_share: 0.5}
-        - {trip_month: '2024-01-01', origin_borough: Queens, dest_borough: Queens, trip_count: 1, total_revenue: 12.00, cross_borough_trip_count: 1, cross_borough_share: 0.5}
-        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, trip_count: 1, total_revenue: 8.00, cross_borough_trip_count: 0, cross_borough_share: 0.0}
+        - {trip_month: '2024-01-01', origin_borough: Queens, dest_borough: Manhattan, billable_trip_count: 1, total_revenue: 30.00, cross_borough_trip_count: 1, cross_borough_share: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Queens, dest_borough: Queens, billable_trip_count: 1, total_revenue: 12.00, cross_borough_trip_count: 1, cross_borough_share: 0.5}
+        - {trip_month: '2024-01-01', origin_borough: Manhattan, dest_borough: Manhattan, billable_trip_count: 1, total_revenue: 8.00, cross_borough_trip_count: 0, cross_borough_share: 0.0}
 
   # --- a zone key with no dimension row keeps its trip -----------------------
   - name: borough_flow_keeps_a_trip_whose_zone_matches_no_row
@@ -64,7 +64,7 @@ unit_tests:
           - {zone_key: 'z-bx', borough_name: Bronx}
     expect:
       rows:
-        - {trip_month: '2024-03-01', origin_borough: Bronx, dest_borough: unresolved, trip_count: 1, total_revenue: 15.50, cross_borough_trip_count: 1, cross_borough_share: 1.0}
+        - {trip_month: '2024-03-01', origin_borough: Bronx, dest_borough: unresolved, billable_trip_count: 1, total_revenue: 15.50, cross_borough_trip_count: 1, cross_borough_share: 1.0}
 
   # --- the filters: billable and the window ---------------------------------
   - name: borough_flow_excludes_non_billable_and_out_of_window_trips
@@ -85,4 +85,4 @@ unit_tests:
           - {zone_key: 'z-si', borough_name: Staten Island}
     expect:
       rows:
-        - {trip_month: '2024-02-01', origin_borough: Staten Island, dest_borough: Staten Island, trip_count: 1, total_revenue: 9.00, cross_borough_trip_count: 0, cross_borough_share: 0.0}
+        - {trip_month: '2024-02-01', origin_borough: Staten Island, dest_borough: Staten Island, billable_trip_count: 1, total_revenue: 9.00, cross_borough_trip_count: 0, cross_borough_share: 0.0}

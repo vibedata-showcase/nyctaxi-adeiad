@@ -5,7 +5,7 @@
 -- count short of the fact's.
 with matrix as (
     select
-        sum(trip_count) as trips,
+        sum(billable_trip_count) as trips,
         round(sum(total_revenue), 2) as revenue
     from {{ ref('agg_borough_flow_monthly') }}
 ),

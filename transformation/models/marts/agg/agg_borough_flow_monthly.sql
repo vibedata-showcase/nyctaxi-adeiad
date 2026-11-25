@@ -29,7 +29,7 @@ cells as (
         trip_month,
         origin_borough,
         dest_borough,
-        count(*) as trip_count,
+        count(*) as billable_trip_count,
         sum(total_amount) as total_revenue,
         count(*) filter (
             where origin_borough is distinct from dest_borough
@@ -47,14 +47,14 @@ origin_month as (
         trip_month,
         origin_borough,
         dest_borough,
-        trip_count,
+        billable_trip_count,
         total_revenue,
         cast(sum(cross_trip_count) over (
             partition by trip_month, origin_borough
         ) as bigint) as cross_borough_trip_count,
-        sum(trip_count) over (
+        sum(billable_trip_count) over (
             partition by trip_month, origin_borough
-        ) as origin_trip_count
+        ) as origin_billable_trip_count
     from cells
 )
 
@@ -62,8 +62,8 @@ select
     trip_month,
     origin_borough,
     dest_borough,
-    trip_count,
+    billable_trip_count,
     total_revenue,
     cross_borough_trip_count,
-    {{ safe_divide('cross_borough_trip_count', 'origin_trip_count') }} as cross_borough_share
+    {{ safe_divide('cross_borough_trip_count', 'origin_billable_trip_count') }} as cross_borough_share
 from origin_month

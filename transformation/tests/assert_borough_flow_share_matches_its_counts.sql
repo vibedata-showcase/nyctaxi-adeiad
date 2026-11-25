@@ -5,8 +5,8 @@ with recomputed as (
     select
         trip_month,
         origin_borough,
-        sum(case when origin_borough is distinct from dest_borough then trip_count else 0 end) as cross_trips,
-        sum(trip_count) as origin_trips,
+        sum(case when origin_borough is distinct from dest_borough then billable_trip_count else 0 end) as cross_trips,
+        sum(billable_trip_count) as origin_trips,
         count(distinct cross_borough_trip_count) as distinct_cross_counts
     from {{ ref('agg_borough_flow_monthly') }}
     group by 1, 2

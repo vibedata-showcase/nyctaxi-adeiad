@@ -2,8 +2,8 @@ apiVersion: v3.2.0
 kind: DataContract
 id: 3f1c8b62-5d47-4c19-9a0e-6d2b7e4f8c31
 name: agg_borough_flow_monthly
-version: 0.1.0
-status: proposed
+version: 1.0.0
+status: active
 servers:
   - server: sample-nyctaxi-comp
     type: duckdb
@@ -42,8 +42,8 @@ schema:
           - type: library
             metric: nullValues
             mustBe: 0
-      - name: trip_count
-        description: "Billable trips picked up in the month that started in the origin borough and ended in the destination borough; published without a floor, so a cell may hold a single trip (ADR 0019)."
+      - name: billable_trip_count
+        description: "Billable trips picked up in the month that started in the origin borough and ended in the destination borough. Published without a floor, so a cell may hold a single trip (ADR 0019)."
         logicalType: integer
         physicalType: BIGINT
         required: true
