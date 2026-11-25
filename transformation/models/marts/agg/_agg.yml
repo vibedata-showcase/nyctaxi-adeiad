@@ -136,16 +136,6 @@ models:
         data_type: DOUBLE
       - name: revenue_rank_that_day
         data_type: BIGINT
-      - name: prev_day_trip_count
-        data_type: BIGINT
-      - name: same_day_last_week_trip_count
-        data_type: BIGINT
-      - name: trip_count_7d_avg
-        data_type: DOUBLE
-      - name: revenue_28d_rolling
-        data_type: DOUBLE
-      - name: revenue_rank_that_day
-        data_type: BIGINT
   - name: agg_od_flow_matrix
     description: >
       Origin-to-destination flow -- the same zone dimension joined twice, in both

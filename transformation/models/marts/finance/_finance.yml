@@ -3,36 +3,46 @@ version: 2
 models:
   - name: mart_daily_zone_revenue
     description: >
-      Daily revenue by pickup zone. The billable rule (ADR 0003) is applied
-      here and nowhere upstream.
+      Daily revenue by pickup zone, read from the operations daily zone rollup.
+      The billable rule (ADR 0003) is applied here, in gold, and nowhere upstream.
     contract: {enforced: true}
     columns:
       - name: trip_date
         data_type: DATE
         data_tests: [not_null]
+        description: Date of the pickup.
       - name: total_revenue
         data_type: DOUBLE
         data_tests: [not_null]
+        description: Sum of the total amount over the billable trips of the zone and day.
       - name: pickup_location_id
         data_type: BIGINT
         data_tests: [{relationships: {arguments: {field: zone_natural_key, to: ref('dim_zone')}}}]
+        description: TLC location id of the pickup zone.
       - name: borough
         data_type: VARCHAR
+        description: Borough of the pickup zone.
       - name: zone_name
         data_type: VARCHAR
+        description: Display name of the pickup zone.
       - name: reporting_region
         data_type: VARCHAR
+        description: Reporting region of the pickup zone.
       - name: trip_count
         data_type: BIGINT
-        description: Trips, billable or not.
+        description: Billable trips.
       - name: fare_revenue
         data_type: DOUBLE
+        description: Sum of the fare over the billable trips.
       - name: tip_revenue
         data_type: DOUBLE
+        description: Sum of the tip over the billable trips.
       - name: surcharge_revenue
         data_type: DOUBLE
+        description: Sum of the surcharges over the billable trips.
       - name: toll_revenue
         data_type: DOUBLE
+        description: Sum of the tolls over the billable trips.
   - name: mart_monthly_service_summary
     description: Monthly volume and revenue by fleet and payment method.
     contract: {enforced: true}
