@@ -76,6 +76,10 @@ The trips between one pickup zone and one dropoff zone.
 **Published flow**:
 An origin-destination pair with at least 25 billable trips in the reporting window, the population the origin-destination matrix reports (ADR 0017). Narrower than a flow: a pair below the floor exists in the trips but is not published.
 
+**Cross-borough share**:
+The trips that leave the borough they started in, as a share of all trips picked up in that borough in the period (ADR 0018). It is a property of the origin borough and period, not of a destination, and a trip that starts and ends in the same borough group — an unresolved one included — does not cross a borough line.
+_Not_: intra-borough share, because the measure is stated the way the question asks it, about traffic that leaves.
+
 **Medallion**:
 The licence to operate a taxi. It is transferable: the licence outlives the vehicle it currently covers and the driver who currently holds it, so it is neither of them.
 _Not_: the bronze, silver and gold layering, which is a platform term defined elsewhere.
