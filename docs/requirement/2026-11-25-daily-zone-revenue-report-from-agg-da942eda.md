@@ -68,3 +68,4 @@ The user resolved the conflict by choosing to **extend `agg_trip_zone_daily` add
 None. Both branches that change rows or values were put to the user and answered: the sourcing conflict (`opt-0`) and the treatment of zone-days with no billable trip (`opt-0`).
 
 ## Approvals
+- 2026-11-25T07:20:56Z — requirement approved — "Approve, continue to design" — 99e40b7
