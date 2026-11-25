@@ -55,3 +55,12 @@ This is a property of the business, not missing data. `is_fleet_attributed`
 states it explicitly so that no consumer has to infer it from a null, and so
 that a fleet-level denominator is never taken over the whole fact.
 {% enddocs %}
+
+{% docs daily_zone_revenue_trip_count %}
+Billable trips: a trip whose total amount is positive (ADR 0003).
+
+The column is named `trip_count` because that is the report's published column
+name, but it does **not** count every trip the way `agg_trip_zone_daily.trip_count`
+does — that aggregate carries both, and this mart selects the billable one. A
+zone-day with no billable trip is not in this report at all.
+{% enddocs %}
