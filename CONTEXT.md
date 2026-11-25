@@ -9,6 +9,10 @@ The vocabulary of the NYC taxi analytics data product: real TLC trip records, pl
 **Trip**:
 One completed taxi journey, as the TLC records it. A trip is identified by its natural columns: service type, vendor, pickup and dropoff time, pickup and dropoff zone, distance and total.
 
+**Borough**:
+The grouping above the zone: every TLC zone belongs to one borough. The TLC's own list is not a list of city boroughs — it also carries EWR, an out-of-state airport, and two labels that place no zone in a borough at all.
+_Not_: city district, because mixing the out-of-state and unplaceable groups into a city total inflates it.
+
 **Service type**:
 Which fleet carried the trip: yellow (medallion taxis) or green (boro taxis). Green may not pick up in the Manhattan core or at the airports except by pre-arrangement, so airport volume is overwhelmingly yellow.
 _Not_: vendor, because a vendor is the technology provider that supplies the meter and serves both fleets.
@@ -75,6 +79,10 @@ The trips between one pickup zone and one dropoff zone.
 
 **Published flow**:
 An origin-destination pair with at least 25 billable trips in the reporting window, the population the origin-destination matrix reports (ADR 0017). Narrower than a flow: a pair below the floor exists in the trips but is not published.
+
+**Borough crossing**:
+A billable trip whose dropoff zone sits in a different borough from its pickup zone. A trip whose destination borough the lookup cannot name is neither a crossing nor a stay, so it is left out of both sides of the crossing share (ADR 0019).
+_Not_: cross-borough trip, because the borough is a property of zones and the trip crosses from one to another, not between two named places.
 
 **Medallion**:
 The licence to operate a taxi. It is transferable: the licence outlives the vehicle it currently covers and the driver who currently holds it, so it is neither of them.
