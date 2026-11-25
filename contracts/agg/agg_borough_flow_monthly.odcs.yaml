@@ -1,0 +1,77 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: 3c1f2a44-7b18-4c6d-9a51-6b0ea7d2f918
+name: agg_borough_flow_monthly
+version: 1.0.0
+status: active
+servers:
+  - server: sample-nyctaxi-comp
+    type: duckdb
+    database: domain.duckdb
+    schema: agg
+schema:
+  - name: agg_borough_flow_monthly
+    dataGranularityDescription: Borough-to-borough flow, one row per trip month, origin borough and destination borough over the full cross product of the window's months and the nine borough groups. Every pair is published, however thin (ADR 0018).
+    properties:
+      - name: trip_month
+        description: "First day of the calendar month the trips were picked up in."
+        logicalType: date
+        physicalType: DATE
+        required: true
+      - name: origin_borough
+        description: "Borough the trip started in, or 'unresolved' when no zone places the pickup."
+        logicalType: string
+        physicalType: VARCHAR
+        required: true
+      - name: dest_borough
+        description: "Borough the trip ended in, or 'unresolved' when no zone places the dropoff."
+        logicalType: string
+        physicalType: VARCHAR
+        required: true
+      - name: origin_is_unresolved
+        description: "True when the origin does not resolve to a borough: the unresolved group for a pickup no dimension row matches, or a borough the TLC cannot place (Unknown, N/A)."
+        logicalType: boolean
+        physicalType: BOOLEAN
+        required: true
+      - name: dest_is_unresolved
+        description: "True when the destination does not resolve to a borough: the unresolved group for a dropoff no dimension row matches, or a borough the TLC cannot place (Unknown, N/A)."
+        logicalType: boolean
+        physicalType: BOOLEAN
+        required: true
+      - name: is_cross_borough
+        description: "True when the destination borough differs from the origin borough; null when either end does not resolve to a borough, because a trip touching a zone the TLC cannot place is not evidence of crossing either way."
+        logicalType: boolean
+        physicalType: BOOLEAN
+      - name: trip_count
+        description: "Billable trips from the origin group to the destination group in the month."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+      - name: total_revenue
+        description: "Sum of the trips' total amounts from the origin group to the destination group in the month, at the cent."
+        logicalType: number
+        physicalType: DOUBLE
+        required: true
+      - name: origin_trip_count
+        description: "Billable trips that started in the origin group in the month, whatever their destination. A property of the origin and month: it repeats on every destination row and must never be summed across them."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+      - name: resolved_destination_trip_count
+        description: "Origin trips whose destination resolves to a borough, the denominator of crossing_share. Repeats on every destination row of the origin and must never be summed across them."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+      - name: unresolved_destination_trip_count
+        description: "Origin trips whose destination resolves to no borough, excluded from crossing_share. Repeats on every destination row of the origin and must never be summed across them."
+        logicalType: integer
+        physicalType: BIGINT
+        required: true
+      - name: crossing_trip_count
+        description: "Origin trips that ended in a different borough, counting only trips whose destination resolves to a borough, the numerator of crossing_share. Null when the origin does not resolve to a borough, because no crossing can be attributed to a zone the source cannot place. Repeats on every destination row of the origin."
+        logicalType: integer
+        physicalType: BIGINT
+      - name: crossing_share
+        description: "crossing_trip_count divided by resolved_destination_trip_count, as a fraction between 0 and 1; null when the origin does not resolve to a borough, because no crossing can be attributed to a zone the source cannot place. Repeats on every destination row of the origin."
+        logicalType: number
+        physicalType: DOUBLE
