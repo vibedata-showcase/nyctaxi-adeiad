@@ -51,6 +51,11 @@
 | Ontology refs | `python3 .agents/skills/semantic-model/scripts/ossie.py refs ontology/ logical-model/` | 0 | pass (warnings only, pre-existing) |
 | Ontology glossary | `python3 .agents/skills/semantic-model/scripts/ossie.py glossary ontology/ CONTEXT.md` | 0 | pass (25 `terms_without_concept`, the existing set plus `Cross-borough trip`) |
 | Baseline cross-check | `not run` | - | `not applicable`: the dbt card's `## Defer` publishes no production manifest for this Domain, so the comparison is unavailable and `/data/cache` was never read |
+| Ship currency | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/ship_currency.py --rows .agents_tmp/ship-currency-rows.json` | 0 | pass (`{"fresh": true, "stale": []}`) |
+| Contract promotion: base manifest | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/diff_manifest_contract.py --materialize 1184020 transformation /tmp/base-manifest.json --deps` | 0 | pass (manifest materialised at the merge-base) |
+| Contract promotion: breaking delta | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/diff_manifest_contract.py /tmp/base-manifest.json transformation/target/manifest.json` | 0 | pass (`weaker: []`; the only entry is `stronger`, a new enforced contract on the new model — no removed or retyped published column, so no breaking-contract stop) |
+| Contract build | `cd transformation && dbt build --select agg_borough_flow_monthly --exclude test_type:unit --target dev --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass (PASS=12, WARN=1, no contract violation) |
+| Destination after the contract build | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/assert_dbt_destination.py` | 0 | pass (`DESTINATION_OK`) |
 
 ## Findings
 
