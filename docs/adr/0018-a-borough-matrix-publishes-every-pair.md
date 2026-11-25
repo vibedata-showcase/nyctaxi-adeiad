@@ -26,4 +26,4 @@ The grid is also what makes the origin share answerable. A share of trip that le
 
 ## Affected designs
 
-None yet: the design record for this intent's borough matrix is written in the design stage, which adds itself here and cites this ADR in the same commit.
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)

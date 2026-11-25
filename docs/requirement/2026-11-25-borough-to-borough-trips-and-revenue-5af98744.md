@@ -17,7 +17,7 @@ She and anyone answering a city question about cross-borough movement consume th
 - [ ] `R-03` The table's population is trips whose pickup and dropoff zones are both in an NYC borough: trips touching an unresolved zone (`Unknown`, `N/A`) and trips touching EWR are outside the published grid and outside every share and total it carries — accept when the three monthly trip totals are 29,568 / 29,650 / 35,505 (against 29,985 / 30,017 / 35,956 over every billable trip) — source: user answer; ADR 0012; figures recomputed in this intent
 - [ ] `R-04` Every row of an origin borough's month carries that borough's outbound cross-borough share, with the trip count it is computed over published beside it — accept when, for each of the three months, the share recomputed independently as the sum of that origin's cross-borough cells over that origin's total trips equals the published value to 1e-9, and January reads Manhattan 5.30%, Queens 70.52%, Brooklyn 37.18%, Bronx 58.88%, Staten Island 40.00% — source: user answer; figures recomputed in this intent
 - [ ] `R-05` A cell with no trips in a month carries zero trips and zero revenue, never a null, and no cell is suppressed for being thin — accept when no row of the table holds a null trip count or null revenue, and the January grid holds 22 cells with trips and 3 with none — source: user answer; ADR 0018
-- [ ] `R-06` The relation is registered in the semantic model and the ontology, and carries an enforced dbt contract and an ODCS contract at the Domain's contract path — accept when `ossie.py validate`, `coverage`, `suppliers` and `notes` pass with the new relation named, `odcs.py check` passes, and a `validating-semantic-model` and a `validating-data-contract` report both pass — source: repository (`repo-map.json` `contracts`, `logical-model/`, `ontology/`); `test-map.json` selectors
+- [ ] `R-06` The relation carries an enforced dbt contract and an ODCS contract at the Domain's contract path, and is recorded in `repo-map.json` as a `semantic_exclusions` entry with its reasons — accept when `odcs.py check` passes, `ossie.py coverage` reports 0 coverage errors with the relation listed as excluded, and the exclusion carries both reasons: its population is not statable from the `trips` dataset's own fields, and its share is not additive across rows — source: repository (`repo-map.json` `contracts`, `semantic exclusions`); design discovery returned this requirement to the user, whose answer chose the exclusion over changing `core.fct_trip`
 - [ ] `R-07` The model's grain, its zero cells and its share are protected by tests — accept when the agg data-test selection passes at the built commit, including a grain-uniqueness test over (month, origin borough, destination borough) and a singular test that each month's cells sum to the independently counted trips — source: repository convention for `transformation/models/marts/agg/`
 
 ## Business decisions
@@ -35,6 +35,7 @@ She and anyone answering a city question about cross-borough movement consume th
 | Coverage of the revenue measure | Complete by construction: every counted trip is billable, and a billable trip has a positive total, so no counted trip lacks the measure. `trip_count` is published beside revenue | ADR 0003; `core.fct_trip` recomputed in this intent |
 | Share scope | Per origin borough per month, outbound: that origin's cross-borough trips over that origin's total trips | user answer |
 | Reuse | Built from `core.fct_trip` with `core.dim_zone` joined twice. No published model serves this grain: `agg_od_flow_matrix` is zone-grain under ADR 0017's floor and `mart_daily_zone_revenue` carries no destination | repository; ADR 0017 |
+| Semantic-model route | The relation is a `semantic_exclusions` entry, not an aggregate logical source: its population is not statable from the `trips` dataset's fields and its share is not additive across rows. The star answers the same question through its detail source | user answer at design |
 | Unmatched and null keys | No row is dropped: every trip has a resolvable pickup and dropoff zone key (0 nulls in Q1), and the borough grid is a left join so a cell with no trips survives | `core.fct_trip` recomputed in this intent |
 | Extended scope | Not a question: no schedule, and the contract, semantic-model and ontology deliverables stay inside `transformation` | transformation playbook |
 
@@ -45,6 +46,7 @@ She and anyone answering a city question about cross-borough movement consume th
 - Zone-grain or neighbourhood-grain flows, and any period other than Q1 2024's three months.
 - A schedule or orchestration item for the new model.
 - Revenue recognised through the payment-method master (ADR 0013), which the user declined in favour of billable revenue.
+- Any change to `core.fct_trip`'s columns or contract, including new borough flags: the user chose the semantic exclusion over widening the fact.
 
 ## Open questions
 
