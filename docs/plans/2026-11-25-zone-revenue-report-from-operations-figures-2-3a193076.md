@@ -68,17 +68,17 @@
 
 **Requirements:** `R-02`, `R-06` · **Design:** `docs/design/models/agg/agg_trip_zone_daily.md`, `docs/design/models/finance/mart_daily_zone_revenue.md` · **Skill:** `semantic-model`, then `validating-semantic-model` · **Depends on:** Tasks 1, 2
 
-- [ ] Edit `logical-model/nyc_taxi_analytics.ossie.yaml`: rewrite `LTS2_zone_day_agg`'s `note` so it no longer contrasts its own `trip_count` with a billable report column, and states that the table now carries the billable measures the revenue report reads. Rewrite `LTS7_daily_zone_revenue`'s `note` so it says the mart inherits the billable verdict from `agg_trip_zone_daily` instead of applying it. Change no `column_map`, `content_levels`, `content_filter`, dataset, metric or physical table.
-- [ ] Regenerate the semantic tests: `python3 .agents/skills/semantic-model/scripts/ossie.py generate-tests logical-model/ transformation/tests`. Commit them only if the command changes them.
-- [ ] Run the chain, each as its own command and each expecting exit 0:
+- [x] Edit `logical-model/nyc_taxi_analytics.ossie.yaml`: rewrite `LTS2_zone_day_agg`'s `note` so it no longer contrasts its own `trip_count` with a billable report column, and states that the table now carries the billable measures the revenue report reads. Rewrite `LTS7_daily_zone_revenue`'s `note` so it says the mart inherits the billable verdict from `agg_trip_zone_daily` instead of applying it. Change no `column_map`, `content_levels`, `content_filter`, dataset, metric or physical table.
+- [x] Regenerate the semantic tests: `python3 .agents/skills/semantic-model/scripts/ossie.py generate-tests logical-model/ transformation/tests`. Commit them only if the command changes them.
+- [x] Run the chain, each as its own command and each expecting exit 0:
   - `python3 .agents/skills/semantic-model/scripts/ossie.py validate logical-model/`
   - `python3 .agents/skills/semantic-model/scripts/ossie.py coverage logical-model/ transformation/models/marts/core transformation/models/marts/agg transformation/models/marts/finance transformation/models/marts/ops --exclude agg.agg_od_flow_matrix --exclude finance.mart_revenue_component_bridge --exclude core.dim_fare_regime`
   - `python3 .agents/skills/semantic-model/scripts/ossie.py suppliers logical-model/`
   - `python3 .agents/skills/semantic-model/scripts/ossie.py notes logical-model/ transformation/tests docs/adr`
   - `python3 .agents/skills/semantic-model/scripts/ossie.py generate-tests logical-model/ transformation/tests --check`
-- [ ] Run `cd /workspace/transformation && dbt build --select assert_semantic_content_holds assert_semantic_levels_hold --exclude test_type:unit`; expect PASS, proving the bindings still hold against the rebuilt relations.
-- [ ] Run `validating-semantic-model`; expect a passing report.
-- [ ] Commit and push the document and any regenerated test.
+- [x] Run `cd /workspace/transformation && dbt build --select assert_semantic_content_holds assert_semantic_levels_hold --exclude test_type:unit`; expect PASS, proving the bindings still hold against the rebuilt relations.
+- [x] Run `validating-semantic-model`; expect a passing report.
+- [x] Commit and push the document and any regenerated test.
 
 ## Execution evidence
 
@@ -107,3 +107,10 @@
 - Task 2: `sqlfluff lint` on the model and the new test — exit 0.
 - Task 2: `ossie.py validate` / `coverage` (34 on disk, 31 named, 0 coverage errors) / `suppliers` (0 unsupplied) / `notes` (0 dangling) / `generate-tests --check` (0 stale) — all exit 0. `LTS7_daily_zone_revenue`'s note now says the mart inherits the billable verdict instead of applying it.
 - Task 2: `sha256` — SQL `4b210f198e95ffbe`, test `0524e09fdb79966c`, `_finance.yml` `487249d2a7f6902b`, contract `794099d0fd3e94f6`.
+- Task 3: `ossie.py generate-tests logical-model/ transformation/tests` — exit 0 — 3 generated tests, 0 changed, so nothing was committed from it.
+- Task 3: `ossie.py validate logical-model/` exit 0; `coverage` exit 0 (34 model(s) on disk, 31 named, 0 coverage error(s)); `suppliers` exit 0 (0 unsupplied item(s)); `notes` exit 0 (0 dangling pointer(s), 0 unchecked director(ies)); `generate-tests --check` exit 0 (0 stale).
+- Task 3: `bindings logical-model/ transformation/target/manifest.json` — exit 0 — 63 model(s) with SQL, 0 error(s), 2 warning(s). Both warnings are `bindings/unproven` on `LTS7_daily_zone_revenue`: the mart now passes `billable_trip_count` and `billable_revenue` through instead of computing an aggregation, so the static trace stops one relation upstream. The `note` now carries the confirming sentence the content review requires — that the aggregation and the population are the metric's own, computed in `agg_trip_zone_daily` — and `assert_semantic_content_holds` holds the binding on data.
+- Task 3: `columns logical-model/ transformation/target/catalog.json` — exit 0 — 0 errors, 5 `columns/datatype-mismatch` warnings, all pre-existing and all in fields this intent did not touch (`trips.total_amount`, `trips.fare_residual`, `shift.gross_revenue`, `maintenance.cost_usd`, `vehicle.maintenance_cost_usd`), each `Decimal` against a `DOUBLE`/`BIGINT`/`HUGEINT` column — same class, different type.
+- Task 3: `dbt test --select assert_semantic_content_holds assert_semantic_level_keys_hold assert_semantic_levels_hold` — exit 0 — PASS=2 WARN=1 ERROR=0. The single warning is the `LTS5_weather_borough_daily` `unresolved` borough sentinel, which its own note documents as a data finding and never a reason to weaken a declaration.
+- Task 3 `validating-semantic-model` verdict: **passes**, on the 15 content items. `LTS2_zone_day_agg` records that the billable measures exist and why they are unbound; `LTS7_daily_zone_revenue` records that the mart inherits the verdict and carries the confirming sentence. No `column_map`, `content_levels`, `content_filter`, dataset, metric or physical table moved, so no mapping, level or filter re-review is triggered.
+- Task 3: `sha256` — `logical-model/nyc_taxi_analytics.ossie.yaml` `272619310da4f732`.
