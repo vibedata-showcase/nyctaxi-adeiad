@@ -78,7 +78,11 @@ models:
     description: >
       Daily zone demand with period-over-period context. The window functions are
       the point: a raw count answers "how many", the lag and rolling average
-      answer "is that normal".
+      answer "is that normal". Two populations share a row: `trip_count` and
+      `total_revenue` count every in-window trip, while the `billable_*` columns
+      count only trips whose total is positive (ADR 0003). The billable rule is
+      computed here so every revenue report downstream inherits it rather than
+      repeating it.
     contract: {enforced: true}
     columns:
       - name: pickup_date_key
@@ -91,15 +95,37 @@ models:
         data_type: VARCHAR
       - name: borough_name
         data_type: VARCHAR
+      - name: reporting_region
+        data_type: VARCHAR
+        description: Reporting region above borough, from the zone version resolved as of the trip's date.
       - name: trip_count
         data_type: BIGINT
         description: Trips, billable or not.
       - name: total_revenue
         data_type: DOUBLE
+        description: Sum of total_amount over every in-window trip, billable or not.
       - name: total_miles
         data_type: DOUBLE
       - name: attributed_driver_count
         data_type: BIGINT
+      - name: billable_trip_count
+        data_type: BIGINT
+        description: Trips whose total amount is positive (ADR 0003). The revenue counterpart of `trip_count`, which counts every trip.
+      - name: billable_fare_revenue
+        data_type: DOUBLE
+        description: Sum of fare_amount over billable trips only.
+      - name: billable_tip_revenue
+        data_type: DOUBLE
+        description: Sum of tip_amount over billable trips only.
+      - name: billable_surcharge_revenue
+        data_type: DOUBLE
+        description: Sum of total_surcharges over billable trips only.
+      - name: billable_toll_revenue
+        data_type: DOUBLE
+        description: Sum of tolls_amount over billable trips only.
+      - name: billable_total_revenue
+        data_type: DOUBLE
+        description: Sum of total_amount over billable trips only. The revenue counterpart of `total_revenue`, which counts every trip.
       - name: prev_day_trip_count
         data_type: BIGINT
       - name: same_day_last_week_trip_count
