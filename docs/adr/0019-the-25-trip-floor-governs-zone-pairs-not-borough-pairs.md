@@ -21,4 +21,4 @@ ADR 0017 publishes an origin-destination pair only when it carries at least 25 b
 
 ## Affected designs
 
-None yet: the design record for the borough flow model is written at the design stage of the same intent.
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
