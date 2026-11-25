@@ -99,6 +99,9 @@
       "sources": [
         "transformation/models/marts/finance/"
       ],
+      "data": [
+        "transformation/tests/assert_daily_zone_revenue_matches_billable_trips.sql"
+      ],
       "selectors": {
         "data": "path:models/marts/finance"
       },
