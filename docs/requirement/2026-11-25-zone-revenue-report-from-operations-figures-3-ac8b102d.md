@@ -66,3 +66,4 @@ Asked which constraint wins, the user chose to **preserve the numbers**: keep `f
 - Ravi's wording assumes Operations keeps daily zone figures of its own. In this warehouse the `agg` daily figures are built from the TLC trip fact, so the fleet's own numbers (4,574 fleet-attributed Q1 trips) are nowhere in `agg`. If Operations does keep figures in a system outside this warehouse, that is a new source and a different intent; the user's answer settled this intent on the warehouse as it stands.
 
 ## Approvals
+- 2026-11-25T05:59:09Z — requirement approved — "Approve and continue to design" — b5ff927
