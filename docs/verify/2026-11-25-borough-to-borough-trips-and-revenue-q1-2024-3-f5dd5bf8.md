@@ -2,29 +2,47 @@
 
 ## Verification
 
-`verdict: blocked` pending build: design discovery recorded, no model authored yet.
+`verdict: verified` at `e485f2f`: `agg.agg_borough_flow_monthly` publishes 122 month × borough-pair rows that match an independent recomputation from `fct_trip` + `dim_zone` on every row's trips and revenue, close to the star at the month level to the cent, and carry a cross-borough share that reproduces the independently computed ratio for all 24 origin × month groups; every gate passed.
 
 ## Coverage
 
 | Item | Evidence | Result | At |
 | --- | --- | --- | --- |
-| `R-01` grain | | | |
-| `R-02` trip count closes to the star | | | |
-| `R-03` revenue closes to the star | | | |
-| `R-04` cross-borough share | | | |
-| `R-05` every borough group retained | | | |
-| `R-06` boundary artifacts | | | |
-| `agg_borough_flow_monthly` model | | | |
+| `R-01` one row per month × origin × destination borough | (a) the grain test `assert_borough_flow_monthly_one_row_per_grain`; (b) independent recompute of the same grouping straight from `fct_trip` + `dim_zone`, then a bidirectional `EXCEPT` against the table | (a) 0 rows returned. (b) `duplicate_grain_rows` 0, `published_rows` 122, `recomputed_rows` 122, `in_source_not_table` 0, `in_table_not_source` 0 | `e485f2f` |
+| `R-02` trips per pair and month | (a) the closure test `assert_borough_flow_monthly_covers_every_trip`; (b) a per-row `FULL OUTER JOIN` of the table against an independent recompute, comparing `billable_trip_count`; (c) month totals against `fct_trip` | (a) 0 rows. (b) 0 mismatched rows out of 122. (c) 29,985 / 30,017 / 35,956 on both sides, equal each month | `e485f2f` |
+| `R-03` revenue per pair and month | the same three checks, comparing `total_revenue` at the cent (`round(x, 2)`) | (b) 0 mismatched rows out of 122. (c) 816,057.76 / 813,885.68 / 999,242.38 on both sides, equal each month | `e485f2f` |
+| `R-04` cross-borough share of the origin borough for the month | (a) the test `assert_borough_flow_monthly_share_is_a_ratio_of_sums`; (b) independent recompute of `cross-borough trips / all trips` per origin and month from `fct_trip` + `dim_zone`, `> 1e-9` tolerance, plus a count of distinct share values per origin-month | (a) 0 rows. (b) 0 disagreeing groups out of 24; every group has exactly 1 distinct share value, so the value repeats across its rows; `sum(cross_borough_trip_count)` equals the independent numerator in all 24 | `e485f2f` |
+| `R-05` the 8 borough groups kept, unresolved and EWR included | independent counts of distinct origin and destination groups against `dim_zone`, plus a consistency check of `cross_borough_trip_count` against its own row's boroughs | 8 origin groups, 8 destination groups, 8 groups on `dim_zone`, 0 `dim_zone` groups absent from the table; `cross_borough_trip_count > billable_trip_count` on 0 rows; a crossing flag on an intra-borough row on 0 rows; a zero crossing count on a cross-borough row on 0 rows | `e485f2f` |
+| `R-06` boundary artifacts: model, tests, ODCS contract, Ossie document | the gates below, each run at this commit | `dbt build` PASS=14, unit test PASS=1, `odcs.py check` exit 0, `ossie.py validate`/`coverage`/`suppliers`/`notes`/`generate-tests --check` all exit 0 | `e485f2f` |
+| Scope row `agg_borough_flow_monthly` (model) | `dbt build --select agg_borough_flow_monthly` + destination check | exit 0, PASS=14 WARN=1 ERROR=0; `DESTINATION_OK`, relation in the sandbox | `e485f2f` |
+| Scope row `contracts/agg/agg_borough_flow_monthly.odcs.yaml` (contract) | `odcs.py check` | exit 0, 0 error-severity findings, `status: active` | `e485f2f` |
+| Scope row `logical-model/nyc_taxi_analytics.ossie.yaml` (logical-model) | `ossie.py validate`, `coverage`, `suppliers`, `notes`, `generate-tests --check` | all exit 0; coverage 35 on disk / 32 named / 0 errors | `e485f2f` |
+| Scope row `ontology/nyc_taxi_analytics.mapping.yaml` (ontology) | `ossie.py validate ontology/`, `refs`, `glossary` | all exit 0 (0 errors; 2 pre-existing `identity-not-natural-key` warnings on Shift and Medallion) | `e485f2f` |
+
+Golden baseline: none is configured for this relation, so every row above stands on independent recomputation from `fct_trip` and `dim_zone` rather than a comparison with a stored golden.
 
 ## Gate results
 
 | Gate | Command | Exit | Outcome |
 | --- | --- | --- | --- |
-| Data and unit tests | - | - | unrun (nothing built) |
-| Project audit | - | - | unrun (nothing built) |
-| Python tests | - | - | unrun (nothing built) |
-| Python lint | - | - | unrun (nothing built) |
-| sqlfluff | - | - | unrun (nothing built) |
+| Data and unit tests (data) | `cd transformation && dbt build --select agg_borough_flow_monthly --target dev --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass — PASS=14 WARN=1 ERROR=0; the one warning is the pre-existing `unresolved` borough sentinel that `LTS5_weather_borough_daily`'s own source note documents, and it does not touch this relation (`assert_semantic_levels_hold` reports only that row) |
+| Sandbox destination | `python .../scripts/assert_dbt_destination.py` | 0 | pass — `DESTINATION_OK: 1 built relation(s) landed in the sandbox ephm_nyc-taxi-analytics_new-intent-f5dd5bf8` |
+| Data and unit tests (unit) | `cd transformation && dbt test --select agg_borough_flow_monthly,test_type:unit --target dev` | 0 | pass — PASS=1 (`borough_flow_share_is_a_ratio_of_sums`) |
+| Project audit | `cd transformation && dbt build --select package:dbt_project_evaluator --vars '{dbt_project_evaluator_enabled: true}' --target dev` | 0 | pass — PASS=66 WARN=12 ERROR=0; no warning names `agg_borough_flow_monthly` (checked with `--select is_empty_fct_missing_primary_key_tests_` and `..._model_naming_conventions_`, neither of which returns the relation) |
+| Contract check | `python3 .agents/skills/data-contract/scripts/odcs.py check` | 0 | pass — 0 error-severity findings |
+| Semantic validate | `python3 .agents/skills/semantic-model/scripts/ossie.py validate logical-model/` | 0 | pass — 2 files, 0 errors, 1 warning (`zone_poi_to_zone to-column-not-a-key`, which pre-dates this intent) |
+| Semantic coverage | `python3 .agents/skills/semantic-model/scripts/ossie.py coverage logical-model/ transformation/models/marts/core transformation/models/marts/agg transformation/models/marts/finance transformation/models/marts/ops --exclude agg.agg_od_flow_matrix --exclude finance.mart_revenue_component_bridge --exclude core.dim_fare_regime` | 0 | pass — 35 model(s) on disk, 32 named, 0 coverage errors |
+| Semantic suppliers | `python3 .agents/skills/semantic-model/scripts/ossie.py suppliers logical-model/` | 0 | pass — 0 unsupplied items |
+| Semantic notes | `python3 .agents/skills/semantic-model/scripts/ossie.py notes logical-model/ transformation/tests docs/adr` | 0 | pass — 0 dangling pointers, 0 unchecked directories |
+| Semantic generated tests | `python3 .agents/skills/semantic-model/scripts/ossie.py generate-tests logical-model/ transformation/tests --check` | 0 | pass — 3 generated test(s), 0 stale |
+| Ontology validate | `python3 .agents/skills/semantic-model/scripts/ossie.py validate ontology/` | 0 | pass — 3 files, 0 errors, 0 warnings |
+| Ontology refs | `python3 .agents/skills/semantic-model/scripts/ossie.py refs ontology/ logical-model/` | 0 | pass — 0 errors, 2 warnings, both pre-existing (Shift identified by `trips.shift_id`, Medallion by `vehicle.medallion_number`) |
+| Ontology glossary | `python3 .agents/skills/semantic-model/scripts/ossie.py glossary ontology/ CONTEXT.md` | 0 | pass — 0 entity types without a term |
+| ADR lint | `python3 .github/scripts/adr_lint.py` | 0 | pass — no duplicate numbers, no dangling references |
+| Ossie lint | `python3 tools/ossie_lint.py` | 0 | pass |
+| Python tests | `python3 -m pytest tests -q` | 0 | pass — 222 passed |
+| Python lint | `ruff check .` | 0 | pass — All checks passed |
+| SQL lint | `sqlfluff lint transformation/models` | 0 | pass — All Finished, no violations |
 
 ## Discovery
 
@@ -41,3 +59,4 @@ from `target: ephemeral`.
 - **`agg.agg_od_flow_matrix` cannot serve this grain.** 1,055 published rows covering 68,513 trips of the window's 95,958 billable trips; it has no month column (it totals the reporting window) and applies ADR 0017's floor. — `select count(*) as rows_published, sum(trip_count) as trips_covered from agg.agg_od_flow_matrix` → 1055 / 68513.
 - **The 25-trip floor's effect at this grain (asked at the requirement stop, declined in favour of publishing every pair).** Applied to month × borough pairs it would keep 56 of the 122 rows and drop 253 trips. — `with b as (... group by 1,2,3) select count(*) as pairs_total, sum(case when trips>=25 then 1 else 0 end) as pairs_ge25, sum(trips) as trips_total, sum(case when trips>=25 then trips else 0 end) as trips_ge25 from b` → 122 / 56 / 95958 / 95705.
 - **Recognised versus gross billable revenue (asked at the requirement stop; gross chosen).** Recognised revenue (payment method `counts_as_revenue`) is $31,310.45 below gross over the quarter: 797 billable dispute trips worth $20,431.24 and 490 no-charge trips worth $10,879.21 carry `counts_as_revenue = false`. — `select round(sum(case when p.counts_as_revenue then f.total_amount else 0 end),2) as recognised, round(sum(f.total_amount),2) as gross, round(sum(f.total_amount) - sum(case when p.counts_as_revenue then f.total_amount else 0 end),2) as diff from core.fct_trip f join core.dim_payment_method p on f.payment_method_key=p.payment_method_key where f.is_billable and f.pickup_date>=date '2024-01-01' and f.pickup_date<date '2024-04-01'` → 2594324.30 / 2625634.75 / 31310.45.
+- **The share cannot be a semantic metric.** `fct_trip` carries `pickup_zone_key` and `dropoff_zone_key`, not boroughs, so no detail row states whether two zones share a borough; `ossie.py generate-tests` fails with `source 'LTS1_detail' of 'trips' maps no column for 'dropoff_borough'` when the metric is expressed over the fact. The refusal and its remedy are recorded in the source `note` and in the design record.
