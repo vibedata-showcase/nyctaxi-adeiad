@@ -539,3 +539,53 @@ models:
         data_type: DOUBLE
       - name: zone_occupancy_rate
         data_type: DOUBLE
+  - name: agg_borough_flow_monthly
+    description: >
+      Monthly borough-to-borough flow: one row per month, origin borough and
+      destination borough, over billable trips picked up inside the reporting
+      window. Every pair carrying at least one billable trip is published, so a
+      thin destination is a row and no minimum-trip rule trims the population
+      (ADR 0018). A destination whose borough the TLC cannot resolve, and the
+      out-of-state one, are rows of their own and count as crossings (ADR 0019).
+      The rows of one origin-month sum to its origin_trip_count, and the share
+      is that month's crossing trips over all of them. Built from fct_trip with
+      dim_zone joined twice.
+    access: public
+    columns:
+      - name: trip_month
+        description: First day of the calendar month the trips were picked up in.
+      - name: origin_borough
+        description: Borough of the pickup zone, as of the trip's date.
+      - name: dest_borough
+        description: >
+          Borough of the dropoff zone, as of the trip's date. The unresolved
+          groups and the out-of-state one appear here as their own values.
+      - name: is_cross_borough
+        description: >
+          True when the destination borough differs from the origin borough, so
+          the trip left the borough it started in. A destination that is
+          unresolved or out of state is a different borough for this purpose.
+      - name: trip_count
+        description: >
+          Billable trips picked up in the month that travelled from the origin
+          borough to the destination borough. Never zero.
+      - name: total_revenue
+        description: >
+          Sum of total_amount over those billable trips; not restricted to the
+          payment methods that count as revenue.
+      - name: cross_borough_trip_count
+        description: >
+          Billable trips that left the origin borough during the month, over
+          every destination. The same value on each of the origin-month's rows,
+          so it is not additive across them; it is the numerator of the share.
+      - name: origin_trip_count
+        description: >
+          All billable trips that started in the origin borough during the
+          month, which the origin-month's rows sum to. The same value on each of
+          those rows, so it is not additive across them; it is the denominator
+          of the share.
+      - name: cross_borough_share
+        description: >
+          cross_borough_trip_count divided by origin_trip_count, as a fraction
+          rather than a percentage. The same value on every row of an
+          origin-month.
