@@ -56,6 +56,7 @@
 | Contract promotion: breaking delta | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/diff_manifest_contract.py /tmp/base-manifest.json transformation/target/manifest.json` | 0 | pass (`weaker: []`; the only entry is `stronger`, a new enforced contract on the new model — no removed or retyped published column, so no breaking-contract stop) |
 | Contract build | `cd transformation && dbt build --select agg_borough_flow_monthly --exclude test_type:unit --target dev --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass (PASS=12, WARN=1, no contract violation) |
 | Destination after the contract build | `python3 /data/default-plugins/vibedata-data-engineering/0.148.28/scripts/assert_dbt_destination.py` | 0 | pass (`DESTINATION_OK`) |
+| Domain sweep | `grep -n "Cross-borough trip" CONTEXT.md`; ADR 0018, 0019 read against the design record | 0 | pass — `domain sweep: nothing new`: `Cross-borough trip` was added with the Requirement and both ADRs were written with it; no term or decision this intent introduced is missing |
 
 ## Findings
 
