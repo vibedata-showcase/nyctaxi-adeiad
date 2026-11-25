@@ -2,39 +2,46 @@
 
 ## Verification
 
-`verdict: unrun` — no build and no gate has run yet; this file holds the design-stage discovery recorded below.
+`verdict: verified` at `413a1258b435d33f9d99e4561da43735137b1758`: every requirement is met and every gate passed on the sandbox build at that commit, with each acceptance number recomputed independently of the model's own CTEs.
 
 ## Coverage
 
 | Item | Evidence | Result | At |
 | --- | --- | --- | --- |
-| `R-01` pair rows and floor | `dbt build` on the model, then the pair-row count per month and the minimum `trip_count` | unrun | - |
-| `R-02` revenue population | recompute the pair revenue sum and the difference against `fct_trip`'s billable revenue | unrun | - |
-| `R-03` crossing share | recompute each origin borough-month's share from `fct_trip` independently of the model | unrun | - |
-| `R-04` no-pair borough-months | count the rows whose `dest_borough` is null and read their shares | unrun | - |
-| `R-05` grain | the singular grain test over (month, origin borough, destination borough) | unrun | - |
-| `R-06` unresolved zones | every borough value appears on `dim_zone`; the rows touching N/A or Unknown keep their trips | unrun | - |
-| `R-07` trip and revenue closure | pairs plus floored-out pairs equal `fct_trip`'s totals | unrun | - |
-| `R-08` whole months | the model's distinct months and the calendar coverage of each | unrun | - |
-| `agg_borough_flow_monthly` | its gate commands | unrun | - |
-| `semantic_exclusions` entry | repo map and `tests/test_maps.py` | unrun | - |
-| `contracts/agg/agg_borough_flow_monthly.odcs.yaml` | `odcs.py check` | unrun | - |
+| `R-01` pairs at the monthly 25-trip floor | `select count(*) filter (where dest_borough is not null) as pair_rows, min(trip_count) ... from agg.agg_borough_flow_monthly`, read on `target: ephemeral`, plus a per-month count | 56 pair rows (18 / 19 / 19), minimum `trip_count` 26 | `413a125` |
+| `R-02` revenue over billable trips, no-charge and dispute included | pair-row revenue read from the built relation, and `assert_borough_flow_trips_reconcile`, which recomputes the remainder from `fct_trip` itself | pair revenue 2,609,219.76; remainder 19,966.06; 2,609,219.76 + 19,966.06 = 2,629,185.82 = `fct_trip`'s Q1 billable revenue | `413a125` |
+| `R-03` crossing share over the borough-month's whole traffic | independent recomputation from `fct_trip` + `dim_zone` joined twice, compared against the model's three share columns for all 24 borough-months | 24 borough-months, 0 denominator mismatches, 0 numerator mismatches, 0 share mismatches; denominators 95,958 and numerators 12,214; Bronx 59.26 / 65.06 / 50.99, Brooklyn 37.54 / 40.68 / 43.36, Manhattan 6.01 / 5.78 / 5.97, Queens 71.54 / 73.10 / 73.96 | `413a125` |
+| `R-04` a borough-month with no qualifying pair still publishes its share | `select ... where dest_borough is null` on the built relation | 9 rows; EWR 0.00% in all three months, N/A 30.77% and Staten Island 45.45% in January; every one carries `trip_count` 0 and `total_revenue` 0.0 | `413a125` |
+| `R-05` grain is month × origin borough × destination borough | `assert_borough_flow_one_row_per_grain` (singular test, `group by all`) and the total row count | PASS; 65 rows = 56 pair + 9 no-pair | `413a125` |
+| `R-06` unresolved zones kept as their own borough groups | `assert_borough_flow_boroughs_exist_on_dim_zone` (singular test) and a count of rows touching N/A or Unknown | PASS; no borough outside `dim_zone`'s 8; 14 published pair rows touch N/A or Unknown and keep their trips | `413a125` |
+| `R-07` every Q1 billable trip accounted for | `assert_borough_flow_trips_reconcile`, which recomputes the fact totals from `fct_trip` and `dim_zone` rather than reading the model's CTEs | PASS: 95,705 published + 253 floored out = 95,958; revenue equal at the cent | `413a125` |
+| `R-08` three whole months, none cut short | the model's distinct `trip_month` values, against `fct_trip`'s calendar coverage | 2024-01, 2024-02, 2024-03; `fct_trip` covers 31 / 29 / 31 calendar days | `413a125` |
+| `agg_borough_flow_monthly` (model) | `dbt build --select "+agg_borough_flow_monthly+" --exclude test_type:unit --target dev`, then `assert_dbt_destination.py` | exit 0, PASS=108 WARN=1 ERROR=0 (the warning is `agg_weather_demand_daily`'s unresolved-borough sentinel, pre-existing); `DESTINATION_OK: 23 built relation(s) landed in the sandbox` | `413a125` |
+| `agg_borough_flow_monthly` unit tests | `dbt test --select agg_borough_flow_monthly,test_type:unit --target dev` | exit 0, PASS=3: the floor's 25/24 boundary, a borough with no qualifying pair, and a borough whose every trip stays inside it | `413a125` |
+| `agg_borough_flow_monthly` tests (singular) | the five `assert_borough_flow_*` tests inside the build above | all PASS | `413a125` |
+| `contracts/agg/agg_borough_flow_monthly.odcs.yaml` | `odcs.py check`, `diff origin/main`, `profile --relation agg.agg_borough_flow_monthly --catalog <sandbox>`, and `validating-data-contract` | check exit 0; diff exit 0 (`[]`); profile exit 0 (`[]`, every claim holds); review verdict passes | `413a125` |
+| `repo-map.json` `semantic_exclusions` | `python3 -m pytest tests/test_maps.py -q` and `ossie.py coverage ... --exclude agg.agg_borough_flow_monthly` | 30 passed; coverage exit 0, 0 coverage error(s) | `413a125` |
+| `test-map.json` `agg.data` | `python3 -m pytest tests/test_maps.py -q` (its `agg.data` selector must resolve to at least one test) and the five paths' existence | 30 passed; all five `assert_borough_flow_*` files registered and present | `413a125` |
+| Scope: nothing outside the Plan's rows | `git diff --stat origin/main` and `list_changes` | 23 files, all additive or append-only; 14 changed assets, all `additive`, 0 weakening Guarantee Changes; no published model edited, `agg_od_flow_matrix` untouched | `413a125` |
+| Weakening | `diff_data_tests.py` on `_agg.yml` between `origin/main` and HEAD, and a read of the `test-map.json` diff | `{"weaker": [], "stronger": [], "ambiguous": []}`; the test map only gained five paths, none removed | `413a125` |
 
 ## Gate results
 
 | Gate | Command | Exit | Outcome |
 | --- | --- | --- | --- |
-| Data and unit tests | `dbt build --select +agg_borough_flow_monthly+ --exclude test_type:unit` then `dbt test --select agg_borough_flow_monthly,test_type:unit` | - | unrun |
-| Docs match data | inspection of the model description and column descriptions against the built SQL | - | unrun |
-| Project audit | `dbt build --select package:dbt_project_evaluator --vars '{dbt_project_evaluator_enabled: true}' --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | - | unrun |
-| Semantic model | `ossie.py validate`, `coverage`, `suppliers`, `notes`, `generate-tests --check`, then `validating-semantic-model` | - | unrun |
-| Ontology | `ontology.py validate`, `refs`, `glossary`, then `validating-ontology` for whatever the semantic change reaches | - | unrun |
-| Contract | `odcs.py check` and a passing `validating-data-contract` report | - | unrun |
-| Map guards | `python3 -m pytest tests -q` | - | unrun |
-| Python lint | `ruff check .` | - | unrun |
-| SQL lint | `sqlfluff lint transformation/models` | - | unrun |
-| Dev-artifact scan | no `dev_mode`, hard-coded `.add_limit()`, environment id or edited profile target | - | unrun |
-| Baseline cross-check | not applicable: the dbt card's `## Defer` says no production manifest is published | - | not applicable |
+| Data and unit tests | `cd transformation && dbt build --select "+agg_borough_flow_monthly+" --exclude test_type:unit --target dev --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` and `dbt test --select agg_borough_flow_monthly,test_type:unit --target dev` | 0, 0 | pass — PASS=108 WARN=1 ERROR=0 and PASS=3; the `+model+` selection built 23 relations, so the gate ran against the code that ships |
+| Docs match data | recomputation of every number in ADRs 0018 and 0019 and in the model and contract descriptions against `fct_trip` and the built relation | 0 | pass — 56/122, 95,705/95,958, 253, 19,966.06, 12,214/12,023, 71.4%, 49.4%/59.3% all recompute exactly; the built relation's 8 columns and BASE TABLE materialisation match the design record's `D-11`, and `D-08`'s DATE month is the built `trip_month` type |
+| Project audit | `cd transformation && dbt build --select package:dbt_project_evaluator --vars '{dbt_project_evaluator_enabled: true}' --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}' --target dev` | 0 | pass — PASS=66 WARN=12 ERROR=0; one warning names `agg_borough_flow_monthly` in `fct_missing_primary_key_tests`, which is correct and is recorded in its contract: the grain cannot be a declared primary key because a no-pair row's `dest_borough` is null by design, so uniqueness is enforced by `assert_borough_flow_one_row_per_grain` |
+| Semantic model | `ossie.py validate logical-model/`, `coverage ... --exclude <four relations>`, `suppliers`, `notes`, `generate-tests --check`, `bindings`, `columns` | 0 | pass — `validating-semantic-model` report: passes for this change; the pre-existing `bindings/unproven` on `mart_vehicle_utilisation` and `agg_weather_demand_daily` and the `columns/datatype-mismatch` on `dim_vehicle.maintenance_cost_usd` belong to other relations |
+| Ontology | `ossie.py validate ontology/`, `refs ontology/ logical-model/`, `glossary ontology/ CONTEXT.md` | 0 | pass — the two glossary terms added (`Borough pair`, `Crossing share`) are consistent; no concept or mapping changed |
+| Contract | `odcs.py check`, `odcs.py diff origin/main`, `odcs.py check --relations --catalog transformation/target/catalog.json`, `odcs.py profile --relation agg.agg_borough_flow_monthly --catalog <sandbox>` | 0, 0, 1, 0 | pass for this relation — `check` and `diff` clean, `profile` empty (every claim holds); `check --relations` exits 1 for reasons outside this relation: every error is a `relations/mismatch` on a dlt-loaded `audit_runs` / `audit_table_loads` that no dbt catalog holds, and no finding names `agg_borough_flow_monthly` |
+| Map guards | `python3 -m pytest tests/test_maps.py -q` | 0 | pass — 30 passed |
+| Python tests | `python3 -m pytest tests -q` | 0 | pass — 222 passed |
+| Python lint | `ruff check .` | 0 | pass — `All checks passed!` |
+| SQL lint | `sqlfluff lint transformation/models` | 0 | pass — `All Finished!` |
+| ADR lint | `python3 .github/scripts/adr_lint.py` | 0 | pass — no duplicate numbers, no dangling references |
+| Dev-artifact scan | `grep` for `dev_mode`, `.add_limit(`, hardcoded environment id, and `git diff origin/main` on `transformation/profiles.yml` | 0 | pass — no match, and the profile is unchanged |
+| Baseline cross-check | not run | - | not applicable: the dbt card's `## Defer` says no production manifest is published, and `/data/cache` was not read |
 
 ## Discovery
 
