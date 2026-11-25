@@ -3,8 +3,10 @@ version: 2
 models:
   - name: mart_daily_zone_revenue
     description: >
-      Daily revenue by pickup zone. The billable rule (ADR 0003) is applied
-      here and nowhere upstream.
+      Daily revenue by pickup zone, for the finance team's morning report. Built
+      from agg_trip_zone_daily so the billable rule (ADR 0003) is applied once
+      upstream rather than a second time here. A zone-day appears only when it
+      has at least one billable trip.
     contract: {enforced: true}
     columns:
       - name: trip_date
@@ -24,7 +26,7 @@ models:
         data_type: VARCHAR
       - name: trip_count
         data_type: BIGINT
-        description: Trips, billable or not.
+        description: Trips whose total amount is positive (ADR 0003); the report counts billable trips only.
       - name: fare_revenue
         data_type: DOUBLE
       - name: tip_revenue
