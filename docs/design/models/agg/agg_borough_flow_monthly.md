@@ -86,7 +86,7 @@ ontology:
 ## Consumers
 
 - Leila Haddad's Mobility Planning team, answering the city's question on cross-borough traffic.
-- The semantic layer: a new aggregate logical source on this relation, so the canonical `billable_trip_count` and `billable_revenue`, and the new cross-borough metrics, can be queried at borough-pair grain.
+- The semantic layer: a new aggregate logical source on this relation, so the canonical `billable_trip_count` and `billable_revenue` can be queried at borough-pair grain. The cross-borough count and share are not reachable that way: they are refused as metrics for the reason in `D-11`, so a consumer reading them queries the columns directly.
 
 ## History
 

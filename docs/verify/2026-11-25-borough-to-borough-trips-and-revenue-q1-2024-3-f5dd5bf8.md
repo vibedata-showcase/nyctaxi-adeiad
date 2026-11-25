@@ -43,6 +43,11 @@ Golden baseline: none is configured for this relation, so every row above stands
 | Python tests | `python3 -m pytest tests -q` | 0 | pass — 222 passed |
 | Python lint | `ruff check .` | 0 | pass — All checks passed |
 | SQL lint | `sqlfluff lint transformation/models` | 0 | pass — All Finished, no violations |
+| Contract promotion | `cd transformation && dbt build --select agg_borough_flow_monthly --target dev --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}'` | 0 | pass — PASS=14 WARN=1 ERROR=0; `access: public` added to the new model beside its enforced contract, and no `contract violation` |
+| Destination after promotion | `python .../scripts/assert_dbt_destination.py` | 0 | pass — `DESTINATION_OK: 1 built relation(s) landed in the sandbox ephm_nyc-taxi-analytics_new-intent-f5dd5bf8` |
+| Contract check after promotion | `python3 .agents/skills/data-contract/scripts/odcs.py check` | 0 | pass — 0 error-severity findings |
+| Manifest breaking delta | `python .../scripts/diff_manifest_contract.py --materialize 1184020 transformation .agents_tmp/base-manifest.json --deps` then `python .../scripts/diff_manifest_contract.py .agents_tmp/base-manifest.json transformation/target/manifest.json` | 0 | pass — `weaker: []`; the only entry is `stronger`: a new enforced contract on `agg_borough_flow_monthly`. No removed or retyped column, so no breaking-contract stop |
+| Domain sweep | `grep -n "Cross-borough" CONTEXT.md`; `ls docs/adr/0018*` | 0 | pass — domain sweep: nothing new; the term `cross-borough trip` and ADR 0018 landed in the design commit, and the final descriptions were corrected to the built column names in this turn |
 
 ## Discovery
 
