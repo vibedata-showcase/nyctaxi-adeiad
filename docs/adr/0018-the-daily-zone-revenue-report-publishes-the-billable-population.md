@@ -26,4 +26,5 @@ Two published relations therefore change their meaning and their dependencies, w
 
 ## Affected designs
 
-None yet: the design record that cites this decision is amended under `designing`, and is listed here in that commit.
+- [`models/agg/agg_trip_zone_daily.md`](../design/models/agg/agg_trip_zone_daily.md)
+- [`models/finance/mart_daily_zone_revenue.md`](../design/models/finance/mart_daily_zone_revenue.md)
