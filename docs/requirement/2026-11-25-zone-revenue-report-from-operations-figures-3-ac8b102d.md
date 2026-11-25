@@ -67,3 +67,4 @@ Asked which constraint wins, the user chose to **preserve the numbers**: keep `f
 
 ## Approvals
 - 2026-11-25T05:59:09Z — requirement approved — "Approve and continue to design" — b5ff927
+- 2026-11-25T06:06:13Z — design approved — "Approve, but stop for now" — 688cafe
