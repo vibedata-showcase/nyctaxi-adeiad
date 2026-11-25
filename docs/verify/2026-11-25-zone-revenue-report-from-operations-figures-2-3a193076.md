@@ -56,6 +56,10 @@ One finding is open and outside this intent's scope: `mart_monthly_service_summa
 | Python tests | `python3 -m pytest tests -q` | 0 | pass — 223 passed |
 | Baseline cross-check | not applicable | - | not run — this platform publishes no production manifest, so no baseline selection exists. |
 | Dev-artifact scan | `git diff 1184020..e1df964` inspection | 0 | pass — no `dev_mode`, no hard-coded `.add_limit()`, no environment id, no edited profile target. |
+| Diff manifest contract | `diff_manifest_contract.py /tmp/base-manifest.json transformation/target/manifest.json` | 0 | pass — `weaker: []`, so no breaking delta; `stronger` lists only the seven columns added to `agg_trip_zone_daily`. No contract promotion and no breaking-contract question. |
+| Contracts build | `dbt build --select agg_trip_zone_daily mart_daily_zone_revenue` | 0 | pass — PASS=14 WARN=1 ERROR=0 of 15, the warning being the documented `unresolved` borough sentinel. No `contract violation`. |
+| Ship-step destination | `assert_dbt_destination.py` | 0 | pass — 2 built relations landed in the sandbox. |
+| domain sweep | `grep -n "billable" CONTEXT.md`; `ls docs/adr/` | 0 | domain sweep: nothing new — ADR 0018 already records the decision, and the glossary's `Billable trip` entry stays true because the report still counts only billable trips. |
 
 ## Discovery
 
