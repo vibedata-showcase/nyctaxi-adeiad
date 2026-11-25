@@ -1,5 +1,56 @@
 # Verification: Borough-to-borough trips and revenue, Q1 2024
 
+## Verification
+
+`verdict: verified` at `23de549`: `agg.agg_borough_flow_monthly` publishes 122 month/origin/destination rows that close exactly against an independent recomputation from `core.fct_trip` and `core.dim_zone` — trips, revenue at the cent, both share counts and the share itself — with no floor, no zero rows, and the unresolved and out-of-state destinations counted as crossings.
+
+## Coverage
+
+| Item | Evidence | Result | At |
+| --- | --- | --- | --- |
+| `R-01` one row per (month, origin, destination) from `fct_trip` + `dim_zone` twice | `select count(*), count(*) - count(distinct (trip_month, origin_borough, dest_borough)) from agg.agg_borough_flow_monthly`; and the row-set diff against the independent recomputation | 122 rows, 0 duplicate grain; `expected_not_published = 0`, `published_not_expected = 0` over `except` both ways | `23de549` |
+| `R-02` billable only, revenue `sum(total_amount)`, reconciling per origin-month | `except` diff of `(month, origin, dest, trips, round(rev,2))` against the recomputation, plus per-origin-month sums | `value_diff = 0`; published trips 95,958 = expected 95,958; `rows_vs_denominator_diff = 0` across 24 origin-months | `23de549` |
+| `R-03` every observed pair, no floor (ADR 0018) | row-set closure against the recomputation of every group with at least one billable trip | 122 published = 122 expected; no group missing, none extra | `23de549` |
+| `R-04` a pair with no billable trips is omitted, not published as zero | `select count(*) from agg.agg_borough_flow_monthly where billable_trip_count = 0` | 0 zero-trip rows; 122 rows below the dense 192 | `23de549` |
+| `R-05` each row carries the share and the two counts it divides | per-origin-month comparison of `origin_billable_trip_count`, `cross_borough_billable_trip_count` and `cross_borough_share` against a recomputation; `assert_borough_flow_share_reconciles` | 24 origin-months: `denom_diff = 0`, `numer_diff = 0`, `share_diff = 0` at 1e-12, `share_not_constant_in_group = 0`, `rows_vs_denominator_diff = 0`; singular test PASS | `23de549` |
+| `R-06` a differing destination counts as leaving, unresolved and out-of-state included | `select count(*) ... where dest_borough in ('Unknown','N/A','EWR')`; Manhattan January share; the flag-vs-comparison contradiction query | 42 destination rows on those groups; Manhattan January 0.060091 (6.01%), not 0.0553; Queens 0.715354 (71.54%); 0 rows where `is_cross_borough` disagrees with the borough comparison | `23de549` |
+| `R-07` three calendar months of pickup date, each published once | `select count(distinct trip_month), min(trip_month), max(trip_month) ...` | 3 months, 2024-01-01 … 2024-03-01 | `23de549` |
+| `R-08` the published relation states what it means, agreeing with the built data | read of `_agg.yml`, the contract's `dataGranularityDescription` and the design record against the queries above | every count, rule and date in the three artifacts matches the built relation; see the wording check below | `23de549` |
+| `contracts/agg/agg_borough_flow_monthly.odcs.yaml` | `odcs.py check`; `odcs.py generate` re-run; `profile --relation` | check exit 0 with no finding naming this relation; generate re-run exit 0 with no diff; profile exit 0, `[]` | `23de549` |
+| `agg_borough_flow_monthly` model | `dbt build --select +agg_borough_flow_monthly+ --exclude test_type:unit` | exit 0, PASS=105 WARN=1 ERROR=0 | `23de549` |
+| `_unit_tests.yml` | `dbt test --select +agg_borough_flow_monthly+,test_type:unit` | exit 0, PASS=6 ERROR=0 (3 of them this model's) | `23de549` |
+| `assert_borough_flow_share_reconciles` | run inside the data-test build above | PASS | `23de549` |
+| `test-map.json` | `python3 -m pytest tests/test_maps.py -q` | exit 0, 31 passed | `23de549` |
+| `LTS10_borough_flow_month` in the Ossie document | `validate`, `coverage`, `suppliers`, `notes`, `generate-tests --check`, `bindings` | all exit 0; no `bindings` finding for this source | `23de549` |
+
+## Gate results
+
+| Gate | Command | Exit | Outcome |
+| --- | --- | --- | --- |
+| Data and unit tests | `cd transformation && dbt build --select +agg_borough_flow_monthly+ --exclude test_type:unit --target dev` and `dbt test --select +agg_borough_flow_monthly+,test_type:unit --target dev` | 0, 0 | pass (PASS=105 WARN=1; PASS=6). The warning is `assert_semantic_levels_hold`'s pre-existing `trips.LTS5_weather_borough_daily … 'unresolved' is no member`, not this model's |
+| Sandbox destination | `python .../scripts/assert_dbt_destination.py` after every writing dbt command | 0 | pass, 23 and then 49 relations in `ephm_nyc-taxi-analytics_new-intent-acd6ec34` |
+| Project audit | `cd transformation && dbt build --select package:dbt_project_evaluator --vars '{dbt_project_evaluator_enabled: true}' --warn-error-options '{"error":["NoNodesForSelectionCriteria"]}' --target dev` | 0 | pass, PASS=66 WARN=12 ERROR=0; no error-severity finding |
+| Semantic model structure | `ossie.py validate` / `coverage` / `suppliers` / `notes` / `generate-tests --check` | 0 / 0 / 0 / 0 / 0 | pass; coverage 32 named of 35 with 3 declared exclusions, 0 coverage errors; the single `validate` warning (`zone_poi_to_zone`) pre-exists at the merge-base |
+| Semantic bindings and columns | `ossie.py bindings logical-model/ transformation/target/manifest.json`; `ossie.py columns logical-model/ transformation/target/catalog.json` | 0 / 0 | pass; 14 `bindings/unproven` warnings, none for `LTS10_borough_flow_month` (all name marts the partial `dbt compile` left without SQL); 5 `columns` warnings, none on this model |
+| Ontology | `ossie.py validate ontology/` / `refs` / `glossary` | 0 / 0 / 0 | pass; 2 pre-existing `refs` warnings; `glossary` lists 25 terms without a concept, of which `Cross-borough share` is one this intent added — see the finding below |
+| Data contract static | `python3 .agents/skills/data-contract/scripts/odcs.py check`; `odcs.py diff origin/main` | 0 / 0 | pass, `[]` from `diff`; no `generated/stale`, no `contract/orphan`, no finding on the new contract |
+| Data contract dynamic | `odcs.py profile --relation agg.agg_borough_flow_monthly --catalog /data/ephm_duckdb/ephm_nyc-taxi-analytics_new-intent-acd6ec34.duckdb` | 0 | pass, `[]` — every `required` claim and the null rules hold on the built rows |
+| Data contract relations | `odcs.py check --relations --catalog transformation/target/catalog.json` | 1 | fail on rows outside this intent's scope: six `relations/mismatch` errors, all `bronze`/`ops_raw`/`mdm_raw` audit relations absent from the dbt catalog (they are dlt-loaded, so dbt's catalog never holds them). No finding names `agg_borough_flow_monthly` |
+| Python tests | `python3 -m pytest tests -q` | 0 | pass, 223 passed |
+| Python lint | `ruff check .` | 0 | pass |
+| SQL lint | `sqlfluff lint transformation/models` | 0 | pass |
+| ADR lint and links | `python3 .github/scripts/adr_lint.py`; `python3 -m pytest tests/test_adr_links.py -q` | 0 / 0 | pass |
+| Dev-artifact scan | `git diff origin/main -- transformation/ \| grep -cE 'dev_mode\|add_limit\|target-path'` | 0 | pass: zero matching lines, so no dev artifact survived |
+| Baseline cross-check | not applicable | - | the Domain publishes no production manifest (dbt card `## Defer`), so `/data/cache` was never read |
+
+## Findings
+
+- **Wording agrees with the data.** Every claim this intent wrote was recomputed. The contract's grain text, `_agg.yml`'s model description and the design record all say "no floor", "omitted rather than zero", "unresolved and out-of-state count as crossings" and "rows sum to the origin-month total"; the queries above return 122 rows with no floor, 0 zero rows, 42 unresolved/out-of-state destination rows, and `rows_vs_denominator_diff = 0`. ADR 0018 and ADR 0019 state no figures, so nothing in them can go stale; `CONTEXT.md`'s two entries likewise state rules only.
+- **`bindings/unproven` on other sources is a limit of this verification, not a defect.** 14 warnings name marts whose SQL the partial `dbt compile --select agg_borough_flow_monthly` left out of the manifest. None names `LTS10_borough_flow_month`; a full `dbt compile` is what would clear the rest, and it does not bear on this intent's rows.
+- **Ontology `glossary` reports `Cross-borough share` as a term without a concept.** That is correct: the term names a measure, not a thing with identity, so the ontology's own rule 1 keeps it prose. No ontology change was due.
+- **`odcs.py check --relations` fails on six audit relations outside this intent.** They are `bronze`, `ops_raw` and `mdm_raw` `audit_runs` / `audit_table_loads`, loaded by dlt and so absent from dbt's catalog. Pre-existing and outside the impacted set, so it is a finding and does not block.
+- **One naming correction during execution.** The star's `trip_count` metric counts all trips, so `generate` wrote "Trips, billable or not." onto a billable-only column. The counts were renamed for their population (`billable_trip_count`, `billable_revenue`, `cross_borough_billable_trip_count`, `origin_billable_trip_count`) in the model, the contract, the properties file, the unit tests and the singular test, and the description is now true of the column.
+
 ## Discovery
 
 - `core.fct_trip` covers Q1 2024 exactly: first pickup 2024-01-01T00:05:25, last 2024-03-31T23:56:17, 97,184 trips, 91 distinct pickup dates — `select min(pickup_datetime) as first_trip, max(pickup_datetime) as last_trip, count(*) as trips from core.fct_trip` and `select min(pickup_date) as d0, max(pickup_date) as d1, count(distinct pickup_date) as days from core.fct_trip`
