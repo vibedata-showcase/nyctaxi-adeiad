@@ -17,37 +17,11 @@
 --
 -- The share ships with its numerator and denominator on the same row, rebuilt
 -- from summed counts rather than averaged from zone-pair rates (ADR 0016), so it
--- is not additive across rows. The unplaced count reads from the fact alone,
+-- is not additive across rows: the window functions total each origin borough's
+-- month across the pairs below it. The unplaced count reads from the fact alone,
 -- because the inner join to both zone roles is exactly what excludes those trips
 -- (ADR 0015).
-with placed as (
-    select
-        cast(date_trunc('month', f.pickup_date) as date) as month_start_date,
-        o.borough_name as origin_borough,
-        dz.borough_name as destination_borough,
-        count(*) as billable_trip_count,
-        sum(f.total_amount) as billable_revenue,
-        count(*) filter (where o.borough_name <> dz.borough_name) as crossing_trip_count
-    from {{ ref('fct_trip') }} f
-    join {{ ref('dim_zone') }} o on f.pickup_zone_key = o.zone_key
-    join {{ ref('dim_zone') }} dz on f.dropoff_zone_key = dz.zone_key
-    where
-        {{ in_report_window('f.pickup_datetime') }}
-        and f.is_billable
-    group by 1, 2, 3
-),
-
-origin_month as (
-    select
-        month_start_date,
-        origin_borough,
-        sum(billable_trip_count) as origin_month_trip_count,
-        sum(crossing_trip_count) as origin_month_crossing_trip_count
-    from placed
-    group by 1, 2
-),
-
-unplaced as (
+with unplaced as (
     select
         cast(date_trunc('month', f.pickup_date) as date) as month_start_date,
         count(*) as unplaced_trip_count
@@ -57,22 +31,41 @@ unplaced as (
         and f.is_billable
         and (f.pickup_zone_key is null or f.dropoff_zone_key is null)
     group by 1
+),
+
+placed as (
+    select
+        cast(date_trunc('month', f.pickup_date) as date) as month_start_date,
+        o.borough_name as origin_borough,
+        dz.borough_name as destination_borough,
+        f.total_amount,
+        u.unplaced_trip_count
+    from {{ ref('fct_trip') }} f
+    join {{ ref('dim_zone') }} o on f.pickup_zone_key = o.zone_key
+    join {{ ref('dim_zone') }} dz on f.dropoff_zone_key = dz.zone_key
+    left join unplaced u on cast(date_trunc('month', f.pickup_date) as date) = u.month_start_date
+    where
+        {{ in_report_window('f.pickup_datetime') }}
+        and f.is_billable
 )
 
 select
-    p.month_start_date,
-    p.origin_borough,
-    p.destination_borough,
-    cast(p.origin_borough <> p.destination_borough as boolean) as is_cross_borough,
-    cast(p.billable_trip_count as bigint) as billable_trip_count,
-    cast(p.billable_revenue as double) as billable_revenue,
-    cast(om.origin_month_trip_count as bigint) as origin_month_trip_count,
-    cast(om.origin_month_crossing_trip_count as bigint) as origin_month_crossing_trip_count,
-    cast(
-        {{ safe_divide('om.origin_month_crossing_trip_count::double', 'om.origin_month_trip_count::double') }}
-        as double
-    ) as origin_month_crossing_share,
-    cast(coalesce(u.unplaced_trip_count, 0) as bigint) as month_unplaced_billable_trip_count
-from placed p
-join origin_month om on p.month_start_date = om.month_start_date and p.origin_borough = om.origin_borough
-left join unplaced u on p.month_start_date = u.month_start_date
+    month_start_date,
+    origin_borough,
+    destination_borough,
+    origin_borough <> destination_borough as is_cross_borough,
+    cast(count(*) as bigint) as billable_trip_count,
+    cast(sum(total_amount) as double) as billable_revenue,
+    cast(sum(count(*)) over (
+        partition by month_start_date, origin_borough
+    ) as bigint) as origin_month_trip_count,
+    cast(sum(count(*) filter (where origin_borough <> destination_borough)) over (
+        partition by month_start_date, origin_borough
+    ) as bigint) as origin_month_crossing_trip_count,
+    {{ safe_divide(
+        'sum(count(*) filter (where origin_borough <> destination_borough)) over (partition by month_start_date, origin_borough)::double',
+        'sum(count(*)) over (partition by month_start_date, origin_borough)::double'
+    ) }} as origin_month_crossing_share,
+    cast(coalesce(unplaced_trip_count, 0) as bigint) as month_unplaced_billable_trip_count
+from placed
+group by 1, 2, 3, 10

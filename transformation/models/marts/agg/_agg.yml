@@ -572,11 +572,11 @@ models:
       - name: billable_trip_count
         data_type: BIGINT
         data_tests: [not_null]
-        description: Billable trips from the origin borough to the destination borough in the month. Every pair that carries traffic is published, so these sum to the month's billable trips except for the trips no zone version places (ADR 0019).
+        description: Trips whose total amount is positive.
       - name: billable_revenue
         data_type: DOUBLE
         data_tests: [not_null]
-        description: Sum of total_amount over those trips.
+        description: Total amount charged on billable trips. Excludes cash tips.
       - name: origin_month_trip_count
         data_type: BIGINT
         data_tests: [not_null]
