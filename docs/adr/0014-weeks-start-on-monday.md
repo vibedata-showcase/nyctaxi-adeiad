@@ -21,3 +21,4 @@ A week starts on Monday. `dim_date.week_start_date` truncates a date to its week
 ## Affected designs
 
 - [`models/core/dim_date.md`](../design/models/core/dim_date.md)
+- [`models/agg/agg_borough_flow_monthly.md`](../design/models/agg/agg_borough_flow_monthly.md)
