@@ -48,6 +48,7 @@ Golden baseline: none is configured for this relation, so every row above stands
 | Contract check after promotion | `python3 .agents/skills/data-contract/scripts/odcs.py check` | 0 | pass — 0 error-severity findings |
 | Manifest breaking delta | `python .../scripts/diff_manifest_contract.py --materialize 1184020 transformation .agents_tmp/base-manifest.json --deps` then `python .../scripts/diff_manifest_contract.py .agents_tmp/base-manifest.json transformation/target/manifest.json` | 0 | pass — `weaker: []`; the only entry is `stronger`: a new enforced contract on `agg_borough_flow_monthly`. No removed or retyped column, so no breaking-contract stop |
 | Domain sweep | `grep -n "Cross-borough" CONTEXT.md`; `ls docs/adr/0018*` | 0 | pass — domain sweep: nothing new; the term `cross-borough trip` and ADR 0018 landed in the design commit, and the final descriptions were corrected to the built column names in this turn |
+| Publication | `gh pr list --head intent/new-intent-f5dd5bf8 --state open --json number,url,headRefName,baseRefName`; then `gh pr view 14 --json number,url,state,headRefName,baseRefName` | 0 | pass — pull request https://github.com/vibedata-showcase/nyctaxi-adeiad/pull/14, `state: OPEN`, head `intent/new-intent-f5dd5bf8`, base `main` |
 
 ## Discovery
 
