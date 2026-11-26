@@ -136,6 +136,7 @@ A non-zero count means the column can land on the boundary, and its criterion is
 - One line per column compared, with its criterion and its diff count.
 - The headline number is the rows differing **under the criterion**, plus `one_sided_rows`, out of the row count. Never quote an exact-equality diff count as the headline: it measures float noise, not the change.
 - The two relations, the key and grain used, and the commit compared.
+- Every figure quoted comes from this run's output. A row count, tie count or diff count remembered from an earlier intent, a design record or a memory is not evidence for this comparison — measure it, and if a remembered figure disagrees with the measurement, the measurement wins and the disagreement is worth reporting.
 - The positive control you ran and what it reported.
 
 ## Common mistakes
@@ -152,3 +153,4 @@ A non-zero count means the column can land on the boundary, and its criterion is
 | Picking a tolerance that just happens to pass | State the tolerance and why it is below the smallest difference a consumer would act on |
 | Blaming the change for a rank churn | Recompute the rank from the relation's own money column, and rebuild the unmodified model twice, before attributing anything |
 | Declaring the baseline wrong because it "won't reproduce itself" | Check what actually failed to reproduce: a column recomputed from its own input, or from a different upstream. The first is a real finding about the model |
+| Filling a record from memory or from a design record | Measure in this run. A remembered row or diff count is not evidence, and where it disagrees, the measurement wins |
