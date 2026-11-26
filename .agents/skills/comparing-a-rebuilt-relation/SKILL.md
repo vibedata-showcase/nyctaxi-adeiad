@@ -70,7 +70,7 @@ But "the ranked value agrees at the cent on those rows" is **not** enough to cal
 | --- | --- |
 | `x 100.0 rank 1`, `y 100.0 rank 1` | `x 100.0 rank 1`, `y 100.0 rank 2` |
 
-Cent values agree on both rows; the tie is gone. That is a real change in what the column means, not noise — and it is what a dissolved tie looks like.
+Cent values agree on both rows; the tie is gone. That is a real change in what the column means — so it is never noise to wave through — and it is also what an unchanged model does on its own when its float input moves. Attribute it (below) before deciding which of the two it is.
 
 So gate on **tie-group shape**, comparing baseline and rebuild at the ranking partition, with the ranked value taken at the criterion's precision:
 
@@ -86,8 +86,21 @@ from shape
 
 - Run it on both relations and compare: same number of groups, same number of tie groups, and the same groups tied.
 - A rank diff is benign only when the tie groups are unchanged **and** the differing rows sit inside one tie group — that is an intra-tie permutation, which is exactly what `rank()` is free to choose.
+- The cheap discriminator per changed row: its peer at the swapped rank must be within tolerance on both sides. Two rows a cent apart churned; two rows dollars apart mean the ranking logic changed, and the verdict flips.
 - A tie group that appears, disappears or changes size is a finding: report it and do not ship it as noise.
 - Never widen a benign rank diff into a licence for the rest of the table: every other column keeps its criterion.
+
+## Attribute the diff before you accept it
+
+A rank column can be a faithful function of its input and still churn, because the *input* moved in the last bits. Tell those apart before filing anything against the change under review:
+
+1. **Recompute the rank from the relation's own money column.** Zero mismatches means the stored column is a deterministic function of its inputs, so any cross-build diff came in through the money value, not through the ranking logic.
+2. **Rebuild the unmodified model twice.** If the same rows churn between two runs of unchanged code, the drift is inherent to the model and cannot be attributed to the change in review.
+3. Only after both come back clean does a diff belong to the change.
+
+## A published rank over a float churns forever
+
+If the ranked value is a `double` in a published, contract-enforced boundary relation, its ties break by an ordering the model never spells out, so every rebuild can produce a one-or-two-row diff. Say so where the comparison is recorded rather than re-diagnosing it each time, and name the two honest fixes: pin the tie-break deterministically in the model (`order by round(x, 2) desc, <key>`), or keep the contract loose on that column. Do not fix it by loosening the rest of the comparison.
 
 ## The rounding trap
 
@@ -115,4 +128,5 @@ A non-zero count means the column can land on the boundary, and its criterion is
 | Quoting an exact-equality diff count as the headline | On a `double` it counts float noise. Round to the cent and quote the rows that differ under the criterion |
 | Treating a rank diff as noise because the values agree at the cent | A float delta dissolves an exact tie while both rows still round the same. Compare the tie-group shape |
 | Picking a tolerance that just happens to pass | State the tolerance and why it is below the smallest difference a consumer would act on |
-| Assuming the rebuild is right because the stored table does not reproduce itself | The stored Domain table is the baseline. A rebuild that disagrees with it is a finding to explain, never a pass |
+| Blaming the change for a rank churn | Recompute the rank from the relation's own money column, and rebuild the unmodified model twice, before attributing anything |
+| Declaring the baseline wrong because it "won't reproduce itself" | Check what actually failed to reproduce: a column recomputed from its own input, or from a different upstream. The first is a real finding about the model |
