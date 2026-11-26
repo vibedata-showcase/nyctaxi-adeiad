@@ -24,6 +24,18 @@ Two further guards make a zero mean something:
 - **Positive control.** Perturb one row by **more than the criterion** and confirm the harness reports it. For cent comparison, move a money cell by `0.01`, not `0.001`: a thousandth of a cent is below the criterion, so `0` there is the criterion working correctly, not a broken harness. Confirm `diff_rows` becomes 1.
 - **Negative control.** Confirm the harness reports 0 when nothing changed, so a green run is not a broken query.
 
+## A rebuilt relation must have been built by *this* change
+
+Differing hashes prove *some* write happened. They do not prove the relation was rebuilt, and neither does the repo's own build record: `tests/test_maps.py::test_compiled_references_name_no_catalog` runs `dbt compile --select int_trips_enriched`, which overwrites `transformation/target/run_results.json`. So `run_results.json` names `int_trips_enriched` and never the model you are comparing, and reading it as "my build did not run" is a false alarm; that file is trustworthy only before any Python test runs.
+
+Establish the build from the artifact instead:
+
+- The build's own output: `dbt build --select <model> --target dev` prints `PASS`/`WARN`/`ERROR` counts for the model and its tests, and exits 0.
+- The sandbox relation's `information_schema` or `duckdb_tables()` row count and the file's mtime moving forward.
+- If a build could not be run (a read-only mandate, a lock), the verdict is `INCONCLUSIVE` with that reason. Bit-identical doubles across two files is the signature of nothing having re-executed, not of a perfect rebuild.
+
+A comparison whose "rebuild" is an unchanged copy reports the same zeros a correct rebuild would, so it cannot tell the two apart.
+
 ## The criterion, per column
 
 | Column | Criterion |
@@ -32,7 +44,7 @@ Two further guards make a zero mean something:
 | DOUBLE money (revenue, amount, fee, tip, total) | equal at the cent: `round(x, 2)` on both sides |
 | other DOUBLE measures (miles, duration, distance) | `round(x, 2)`, or an absolute tolerance when the measure is coarser than a cent |
 | DOUBLE averages and ratios (`avg`, a share, a rolling mean) | an explicit tolerance: `abs(a - b) <= 1e-6`. Rounding a ratio to cents hides real drift |
-| rank or `row_number` over a float | tie-driven — see below |
+| rank or `row_number` **ranking a** float (its own type is an integer) | tie-driven — see below |
 | key column | never compared for value; it is the join |
 
 Money is the cent because summing the same rows in a different parallel order moves the last bits of a `double`: deltas around 1e-9 on values near 1e8, with the aggregation logic unchanged.
@@ -144,6 +156,7 @@ A non-zero count means the column can land on the boundary, and its criterion is
 | Mistake | Fix |
 | --- | --- |
 | Reporting 0 diffs without checking the two files are different | Identical `md5sum` means you compared a file to itself. Verdict is `INCONCLUSIVE` |
+| Concluding "no build ran" from `target/run_results.json` | A Python test overwrites it with a `dbt compile` of `int_trips_enriched`. Read the build's own output |
 | Certifying a clean run with a harness you never saw report a difference | Perturb one row by more than the criterion (`0.01` for cent) and confirm `diff_rows` becomes 1 |
 | `select count(*) from a join b using (k) where a.x <> b.x` | An inner join hides one-sided rows and `<>` hides NULLs. Full outer plus `is distinct from` |
 | Comparing a row hash, or `except`/`intersect` on doubles | Exact by construction, so it reports float noise as a difference |
