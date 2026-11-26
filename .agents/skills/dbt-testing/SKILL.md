@@ -27,6 +27,8 @@ A left join on a derived key (a hashed or concatenated key built in two places) 
 
 DuckDB float aggregation is not reproducible bit for bit: two builds of the same model from the same inputs can differ in the last bits of a `double`. Compare money at the cent (`round(x, 2)`) and other measures with an explicit tolerance, never by hashing raw values. A column the change does not touch counts as unchanged when every row agrees at that precision. A requirement's acceptance condition that compares values names this precision ("equal at the cent", "within 1e-6"), so verification does not read "equal" as bit-for-bit.
 
+A whole-relation comparison against a baseline is [`comparing-a-rebuilt-relation`](../comparing-a-rebuilt-relation/SKILL.md): the criterion per column, the full outer join on the grain, tie-driven ranks and the half-cent rounding trap.
+
 ## Unit tests (C5)
 
 A model needs a unit test when its logic has a branch a reviewer could get wrong: ordering and tie-breaks, deduplication, and state classification. Today: `int_status_intervals`, `int_trips_enriched`, `int_trips_conformed`. Unit tests live in `_unit_tests.yml` beside the dbt model.

@@ -37,6 +37,7 @@ Operator conventions are skills in `.agents/skills/`, and the agent's skill list
 | [`validating-semantic-model`](.agents/skills/validating-semantic-model/SKILL.md) | Structural gate plus the content review before commit |
 | [`sql-style`](.agents/skills/sql-style/SKILL.md) | SQL formatting |
 | [`dbt-testing`](.agents/skills/dbt-testing/SKILL.md) | Generic, singular, unit and Python tests |
+| [`comparing-a-rebuilt-relation`](.agents/skills/comparing-a-rebuilt-relation/SKILL.md) | Proving a rebuilt relation matches a baseline: the criterion per column, a full outer join on the grain, tie-driven ranks, the half-cent rounding trap |
 | [`dlt`](.agents/skills/dlt/SKILL.md) | Datasets, write disposition, schema contract, generated column hints, bronze carries no logic |
 | [`context`](.agents/skills/context/SKILL.md) | What goes into `CONTEXT.md` |
 | [`adr`](.agents/skills/adr/SKILL.md) | What goes into an ADR, and when |
