@@ -7,6 +7,23 @@ description: "Use when a rebuilt or changed relation must be proven to match a b
 
 One question decides it: does every column of the rebuilt relation agree with the baseline under a criterion the comparison states? Not "are the two files identical" — DuckDB float aggregation is not reproducible bit for bit, so exact equality on a `double` fails on correct rebuilds.
 
+## First: prove the two sides are different
+
+The sandbox starts as a copy of the Domain file, so before any comparison decide whether the relation was actually rebuilt. `md5sum` both files, and `stat` their size and mtime:
+
+```bash
+vd-intent-context-run.sh 'md5sum "$VD_DOMAIN_DUCKDB_LOCAL_PATH" "$VD_EPHM_DUCKDB_LOCAL_PATH"'
+```
+
+- **Identical hashes mean the comparison is vacuous.** Every column returns zero because both sides are the same bytes, and a zero proves nothing about the build. Report it as `INCONCLUSIVE`, not a pass.
+- A rebuilt relation changes the file, so the hashes differ and a zero starts to carry information.
+- Record both hashes beside the verdict in the verification record, so the next reader can tell a legitimate zero from a vacuous one.
+
+Two further guards make a zero mean something:
+
+- **Positive control.** Perturb one row by **more than the criterion** and confirm the harness reports it. For cent comparison, move a money cell by `0.01`, not `0.001`: a thousandth of a cent is below the criterion, so `0` there is the criterion working correctly, not a broken harness. Confirm `diff_rows` becomes 1.
+- **Negative control.** Confirm the harness reports 0 when nothing changed, so a green run is not a broken query.
+
 ## The criterion, per column
 
 | Column | Criterion |
@@ -114,14 +131,19 @@ A non-zero count means the column can land on the boundary, and its criterion is
 
 ## What goes in the record
 
+- **The verdict is one of three words: `PASS`, `FAIL`, `INCONCLUSIVE`.** A zero after a vacuous comparison is `INCONCLUSIVE`.
+- Both files' `md5sum`, so a zero can be told apart from a self-comparison.
 - One line per column compared, with its criterion and its diff count.
-- The headline number is the rows differing **under the criterion**, plus `one_sided_rows`. Never quote an exact-equality diff count as the headline: it measures float noise, not the change.
+- The headline number is the rows differing **under the criterion**, plus `one_sided_rows`, out of the row count. Never quote an exact-equality diff count as the headline: it measures float noise, not the change.
 - The two relations, the key and grain used, and the commit compared.
+- The positive control you ran and what it reported.
 
 ## Common mistakes
 
 | Mistake | Fix |
 | --- | --- |
+| Reporting 0 diffs without checking the two files are different | Identical `md5sum` means you compared a file to itself. Verdict is `INCONCLUSIVE` |
+| Certifying a clean run with a harness you never saw report a difference | Perturb one row by more than the criterion (`0.01` for cent) and confirm `diff_rows` becomes 1 |
 | `select count(*) from a join b using (k) where a.x <> b.x` | An inner join hides one-sided rows and `<>` hides NULLs. Full outer plus `is distinct from` |
 | Comparing a row hash, or `except`/`intersect` on doubles | Exact by construction, so it reports float noise as a difference |
 | Using `except` to count differing rows | It also reports a row whose *other* columns changed; count per column instead |
