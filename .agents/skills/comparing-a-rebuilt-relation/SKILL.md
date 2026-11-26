@@ -62,11 +62,32 @@ from j
 
 ## Tie-driven columns
 
-A rank over a float is not reproducible, and its diff count is not a regression: when values tie, or sit within a float delta of each other, the order `rank()` sees can differ between two correct builds. Report the count and name the cause instead of filing it as drift.
+A rank over a float is not reproducible, and a differing rank is not by itself a regression: when values tie, or sit within a float delta of each other, the order `rank()` sees can differ between two correct builds.
 
-- Count the tie groups at the ranking partition: `group by <partition>, <ranked value> having count(*) > 1`.
-- Accept a handful of differing rows out of tens of thousands **only** when the ranked value itself agrees at the cent on those rows.
-- Never widen that into a licence for the rest of the table: every other column keeps its criterion.
+But "the ranked value agrees at the cent on those rows" is **not** enough to call a rank diff benign. A float delta can *dissolve* an exact tie, and both rows still round to the same cent:
+
+| Baseline | Rebuild |
+| --- | --- |
+| `x 100.0 rank 1`, `y 100.0 rank 1` | `x 100.0 rank 1`, `y 100.0 rank 2` |
+
+Cent values agree on both rows; the tie is gone. That is a real change in what the column means, not noise — and it is what a dissolved tie looks like.
+
+So gate on **tie-group shape**, comparing baseline and rebuild at the ranking partition, with the ranked value taken at the criterion's precision:
+
+```sql
+with shape as (
+    select <partition>, round(<ranked value>, 2) as ranked_cents, count(*) as group_size
+    from <relation>
+    group by 1, 2
+)
+select count(*) as groups, count(*) filter (where group_size > 1) as tie_groups
+from shape
+```
+
+- Run it on both relations and compare: same number of groups, same number of tie groups, and the same groups tied.
+- A rank diff is benign only when the tie groups are unchanged **and** the differing rows sit inside one tie group — that is an intra-tie permutation, which is exactly what `rank()` is free to choose.
+- A tie group that appears, disappears or changes size is a finding: report it and do not ship it as noise.
+- Never widen a benign rank diff into a licence for the rest of the table: every other column keeps its criterion.
 
 ## The rounding trap
 
@@ -92,5 +113,6 @@ A non-zero count means the column can land on the boundary, and its criterion is
 | Comparing a row hash, or `except`/`intersect` on doubles | Exact by construction, so it reports float noise as a difference |
 | Using `except` to count differing rows | It also reports a row whose *other* columns changed; count per column instead |
 | Quoting an exact-equality diff count as the headline | On a `double` it counts float noise. Round to the cent and quote the rows that differ under the criterion |
-| Treating a rank diff as a regression | Check the tie groups and the ranked value first |
+| Treating a rank diff as noise because the values agree at the cent | A float delta dissolves an exact tie while both rows still round the same. Compare the tie-group shape |
+| Picking a tolerance that just happens to pass | State the tolerance and why it is below the smallest difference a consumer would act on |
 | Assuming the rebuild is right because the stored table does not reproduce itself | The stored Domain table is the baseline. A rebuild that disagrees with it is a finding to explain, never a pass |
